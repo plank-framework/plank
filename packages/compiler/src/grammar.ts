@@ -48,7 +48,7 @@ export interface ForLoopNode {
 // Directive patterns
 export const DIRECTIVE_PATTERNS = {
   // Event handlers: on:click, on:submit, etc.
-  EVENT: /^on:([a-zA-Z][a-zA-Z0-9-]*)$/,
+  EVENT: /^on:(click|submit|change|input|focus|blur|keydown|keyup|keypress|mousedown|mouseup|mouseover|mouseout|load|unload|resize|scroll)$/,
 
   // Two-way binding: bind:value, bind:checked, etc.
   BIND: /^bind:([a-zA-Z][a-zA-Z0-9-]*)$/,

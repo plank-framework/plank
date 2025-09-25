@@ -1,10 +1,10 @@
 /**
- * @fileoverview HTML parser for Plank templates
- * Parses HTML with directive annotations into AST
+ * @fileoverview Working HTML parser for Plank templates
+ * A simple, robust implementation
  */
 
 import { TemplateNode, DirectiveNode, IslandNode, ScriptNode } from './grammar.js';
-import { getDirectiveType, isValidIslandStrategy, ISLAND_STRATEGIES } from './grammar.js';
+import { getDirectiveType, isValidIslandStrategy, ISLAND_STRATEGIES, isValidDirective } from './grammar.js';
 
 export interface HTMLParseOptions {
   /** Enable development mode with additional debugging info */
@@ -22,7 +22,7 @@ export interface HTMLParseResult {
   errors: Array<{ message: string; line: number; column: number; filename?: string | undefined }>;
 }
 
-export class HTMLParser {
+export class WorkingHTMLParser {
   private source: string;
   private filename?: string | undefined;
   private dev: boolean;
@@ -76,27 +76,25 @@ export class HTMLParser {
 
       if (this.pos >= this.source.length) break;
 
-      if (this.match('<!--')) {
-        // HTML comment
-        this.parseComment();
-      } else if (this.match('<script')) {
-        // Script tag
-        const script = this.parseScript();
-        if (script) {
-          this.scripts.push(script);
-        }
-      } else if (this.match('</')) {
-        // Closing tag - should not happen at template level
-        this.addError('Unexpected closing tag');
-        this.skipToNextTag();
-      } else if (this.match('<')) {
-        // Opening tag
-        const element = this.parseElement();
-        if (element) {
-          template.children!.push(element);
+      if (this.source[this.pos] === '<') {
+        if (this.source.slice(this.pos, this.pos + 4) === '<!--') {
+          this.parseComment();
+        } else if (this.source.slice(this.pos, this.pos + 7) === '<script') {
+          const script = this.parseScript();
+          if (script) {
+            this.scripts.push(script);
+          }
+        } else if (this.source[this.pos + 1] === '/') {
+          // Skip closing tags at template level
+          this.skipToNext('>');
+          this.advance(); // Skip the '>'
+        } else {
+          const element = this.parseElement();
+          if (element) {
+            template.children!.push(element);
+          }
         }
       } else {
-        // Text content
         const text = this.parseText();
         if (text) {
           template.children!.push(text);
@@ -108,26 +106,41 @@ export class HTMLParser {
   }
 
   private parseElement(): TemplateNode | null {
-    if (!this.match('<')) return null;
+    if (this.source[this.pos] !== '<') return null;
+
+    this.advance(); // Skip the '<'
 
     const tagName = this.parseTagName();
     if (!tagName) {
       this.addError('Invalid tag name');
+      this.skipToNext('>');
+      this.advance(); // Skip the '>'
       return null;
     }
 
     const attributes = this.parseAttributes();
 
-    if (this.match('/>')) {
+    if (this.source.slice(this.pos, this.pos + 2) === '/>') {
       // Self-closing tag
+      this.advance(2);
       return this.createElement(tagName, attributes, true);
-    } else if (this.match('>')) {
+    } else if (this.source[this.pos] === '>') {
       // Regular tag with content
+      this.advance(); // Skip the '>'
       const element = this.createElement(tagName, attributes, false);
+
+      // Check if this is a self-closing HTML element
+      if (this.isSelfClosingElement(tagName)) {
+        // Treat as self-closing even without />
+        return element;
+      }
+
       element.children = this.parseElementContent(tagName);
       return element;
     } else {
       this.addError('Invalid tag syntax');
+      this.skipToNext('>');
+      this.advance(); // Skip the '>'
       return null;
     }
   }
@@ -148,7 +161,7 @@ export class HTMLParser {
     while (this.pos < this.source.length) {
       this.skipWhitespace();
 
-      if (this.match('/>') || this.match('>')) {
+      if (this.source.slice(this.pos, this.pos + 2) === '/>' || this.source[this.pos] === '>') {
         break;
       }
 
@@ -156,7 +169,8 @@ export class HTMLParser {
       if (!name) break;
 
       let value = '';
-      if (this.match('=')) {
+      if (this.source[this.pos] === '=') {
+        this.advance(); // Skip the '='
         value = this.parseAttributeValue();
       }
 
@@ -177,9 +191,9 @@ export class HTMLParser {
   }
 
   private parseAttributeValue(): string {
-    if (this.match('"')) {
+    if (this.source[this.pos] === '"') {
       return this.parseQuotedString('"');
-    } else if (this.match("'")) {
+    } else if (this.source[this.pos] === "'") {
       return this.parseQuotedString("'");
     } else {
       // Unquoted value
@@ -216,19 +230,23 @@ export class HTMLParser {
     while (this.pos < this.source.length) {
       this.skipWhitespace();
 
-      if (this.match(`</${tagName}>`)) {
-        break;
-      } else if (this.match('<!--')) {
+      // Check for closing tag
+      if (this.source[this.pos] === '<' && this.source[this.pos + 1] === '/') {
+        const closingTag = `</${tagName}>`;
+        if (this.source.slice(this.pos, this.pos + closingTag.length) === closingTag) {
+          this.advance(closingTag.length);
+          break;
+        }
+      }
+
+      if (this.source.slice(this.pos, this.pos + 4) === '<!--') {
         this.parseComment();
-      } else if (this.match('<script')) {
+      } else if (this.source.slice(this.pos, this.pos + 7) === '<script') {
         const script = this.parseScript();
         if (script) {
           this.scripts.push(script);
         }
-      } else if (this.match('</')) {
-        this.addError('Unexpected closing tag');
-        this.skipToNextTag();
-      } else if (this.match('<')) {
+      } else if (this.source[this.pos] === '<') {
         const element = this.parseElement();
         if (element) {
           children.push(element);
@@ -264,33 +282,40 @@ export class HTMLParser {
 
   private parseComment(): void {
     // Skip HTML comment
-    while (this.pos < this.source.length && !this.match('-->')) {
+    while (this.pos < this.source.length && this.source.slice(this.pos, this.pos + 3) !== '-->') {
       this.advance();
     }
-    if (this.match('-->')) {
+    if (this.source.slice(this.pos, this.pos + 3) === '-->') {
       this.advance(3);
     }
   }
 
   private parseScript(): ScriptNode | null {
-    if (!this.match('<script')) return null;
+    if (this.source.slice(this.pos, this.pos + 7) !== '<script') return null;
+
+    // Skip <script
+    this.advance(7);
 
     const attributes = this.parseAttributes();
 
-    if (!this.match('>')) {
+    if (this.source[this.pos] !== '>') {
       this.addError('Invalid script tag');
+      this.skipToNext('>');
+      this.advance(); // Skip the '>'
       return null;
     }
 
+    this.advance(); // Skip the '>'
+
     // Parse script content
     const start = this.pos;
-    while (this.pos < this.source.length && !this.match('</script>')) {
+    while (this.pos < this.source.length && this.source.slice(this.pos, this.pos + 9) !== '</script>') {
       this.advance();
     }
 
     const content = this.source.slice(start, this.pos);
 
-    if (this.match('</script>')) {
+    if (this.source.slice(this.pos, this.pos + 9) === '</script>') {
       this.advance(9);
     }
 
@@ -313,6 +338,12 @@ export class HTMLParser {
 
     // Parse directives
     for (const [name, value] of Object.entries(attributes)) {
+      // Check if this looks like a directive but is invalid
+      // Skip validation for island loading strategies
+      if (name.includes(':') && !isValidDirective(name) && !isValidIslandStrategy(name)) {
+        this.addError(`Invalid directive: ${name}`);
+      }
+
       const directiveType = getDirectiveType(name);
       if (directiveType) {
         element.directive = this.parseDirective(directiveType, name, value);
@@ -354,11 +385,6 @@ export class HTMLParser {
     return { src, strategy };
   }
 
-  private match(str: string): boolean {
-    if (this.pos + str.length > this.source.length) return false;
-    return this.source.slice(this.pos, this.pos + str.length) === str;
-  }
-
   private advance(count = 1): void {
     for (let i = 0; i < count; i++) {
       if (this.pos < this.source.length) {
@@ -379,10 +405,18 @@ export class HTMLParser {
     }
   }
 
-  private skipToNextTag(): void {
-    while (this.pos < this.source.length && this.source[this.pos] !== '<') {
+  private skipToNext(char: string): void {
+    while (this.pos < this.source.length && this.source[this.pos] !== char) {
       this.advance();
     }
+  }
+
+  private isSelfClosingElement(tagName: string): boolean {
+    const selfClosingTags = [
+      'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+      'link', 'meta', 'param', 'source', 'track', 'wbr'
+    ];
+    return selfClosingTags.includes(tagName.toLowerCase());
   }
 
   private addError(message: string): void {
@@ -399,6 +433,6 @@ export class HTMLParser {
  * Parse HTML source into AST
  */
 export function parseHTML(source: string, options: HTMLParseOptions = {}): HTMLParseResult {
-  const parser = new HTMLParser(source, options);
+  const parser = new WorkingHTMLParser(source, options);
   return parser.parse();
 }

@@ -118,6 +118,10 @@ export class PlankParser {
     // Extract scripts from HTML parsing
     this.scripts = htmlResult.scripts;
 
+    // Extract islands and actions from the AST
+    this.extractIslands(htmlResult.ast);
+    this.extractActions(htmlResult.ast);
+
     return htmlResult.ast;
   }
 
@@ -224,6 +228,30 @@ export class PlankParser {
     }
 
     return exports;
+  }
+
+  private extractIslands(node: TemplateNode): void {
+    if (node.type === 'element' && node.tag === 'island' && node.island) {
+      this.islands.push(node.island.src);
+    }
+
+    if (node.children) {
+      for (const child of node.children) {
+        this.extractIslands(child);
+      }
+    }
+  }
+
+  private extractActions(node: TemplateNode): void {
+    if (node.type === 'element' && node.directive?.type === 'use-action') {
+      this.actions.push(node.directive.value);
+    }
+
+    if (node.children) {
+      for (const child of node.children) {
+        this.extractActions(child);
+      }
+    }
   }
 
   private addError(message: string, line = 1, column = 1): void {

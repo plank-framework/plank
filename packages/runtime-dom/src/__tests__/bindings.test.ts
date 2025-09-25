@@ -60,14 +60,7 @@ describe('DOM Bindings', () => {
 
       expect(div.textContent).toBe('10');
 
-      // Debug: check values before change
-      console.log('Before change - count:', count(), 'doubled:', doubled(), 'textContent:', div.textContent);
-      
       changeAndFlush(count, 10);
-      
-      // Debug: check values after change
-      console.log('After change - count:', count(), 'doubled:', doubled(), 'textContent:', div.textContent);
-      
       expect(div.textContent).toBe('20');
 
       stop.stop();

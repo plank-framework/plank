@@ -15,6 +15,7 @@ import {
   isValidIslandStrategy,
   isValidExpression
 } from './grammar.js';
+import { parseHTML } from './html-parser.js';
 
 // Re-export types for external use
 export type {
@@ -36,6 +37,8 @@ export interface ParseOptions {
 export interface ParseResult {
   /** Parsed template AST */
   ast: TemplateNode;
+  /** Scripts found in the template */
+  scripts: ScriptNode[];
   /** List of dependencies found in the template */
   dependencies: string[];
   /** Islands detected in the template */
@@ -58,6 +61,7 @@ export class PlankParser {
   private filename: string | undefined;
   private dev: boolean;
   private errors: ParseError[] = [];
+  private scripts: ScriptNode[] = [];
   private dependencies: string[] = [];
   private islands: string[] = [];
   private actions: string[] = [];
@@ -73,6 +77,7 @@ export class PlankParser {
    */
   parse(): ParseResult {
     this.errors = [];
+    this.scripts = [];
     this.dependencies = [];
     this.islands = [];
     this.actions = [];
@@ -81,6 +86,7 @@ export class PlankParser {
       const ast = this.parseTemplate();
       return {
         ast,
+        scripts: this.scripts,
         dependencies: this.dependencies,
         islands: this.islands,
         actions: this.actions,
@@ -90,6 +96,7 @@ export class PlankParser {
       this.addError(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         ast: { type: 'template', children: [] },
+        scripts: [],
         dependencies: [],
         islands: [],
         actions: [],
@@ -99,17 +106,19 @@ export class PlankParser {
   }
 
   private parseTemplate(): TemplateNode {
-    // TODO: Implement full HTML parsing
-    // This is a placeholder for Phase A implementation
+    // Use HTML parser to parse the template
+    const htmlResult = parseHTML(this.source, {
+      dev: this.dev,
+      filename: this.filename
+    });
 
-    const template: TemplateNode = {
-      type: 'template',
-      children: []
-    };
+    // Add HTML parsing errors to our error list
+    this.errors.push(...htmlResult.errors);
 
-    // For now, return a basic template structure
-    // Full HTML parsing will be implemented in the next iteration
-    return template;
+    // Extract scripts from HTML parsing
+    this.scripts = htmlResult.scripts;
+
+    return htmlResult.ast;
   }
 
   private parseElement(tagName: string, attributes: Record<string, string>): TemplateNode {

@@ -21,6 +21,8 @@ export interface CompileResult {
   code: string;
   /** Source map if enabled */
   map?: string;
+  /** Scripts found in the template */
+  scripts: Array<{ type: 'server' | 'client'; content: string; exports?: string[] }>;
   /** List of dependencies found in the template */
   dependencies: string[];
   /** Islands detected in the template */
@@ -49,6 +51,7 @@ export function compile(
 
   return {
     code: '// TODO: Implement template compilation from AST',
+    scripts: parseResult.scripts,
     dependencies: parseResult.dependencies,
     islands: parseResult.islands,
     actions: parseResult.actions,

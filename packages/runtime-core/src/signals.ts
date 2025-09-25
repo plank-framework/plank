@@ -94,9 +94,6 @@ class Scheduler {
     // Store dependents before clearing them
     const dependents = new Set((computed as any).dependents);
 
-    // Mark as clean before recomputation
-    (computed as any).isDirty = false;
-
     // Clear old dependencies
     for (const dep of computed.dependencies) {
       dep.dependents.delete(computed);
@@ -112,6 +109,8 @@ class Scheduler {
 
     try {
       (computed as any).value = computed();
+      // Mark as clean after successful recomputation
+      (computed as any).isDirty = false;
     } finally {
       activeComputed = prevActiveComputed;
       activeEffect = prevActiveEffect;
@@ -137,6 +136,30 @@ let activeComputed: Computed<any> | null = null;
 let activeEffect: Effect | null = null;
 
 /**
+ * Mark a computed as dirty and notify its dependents
+ */
+function markComputedDirty(computed: Computed<any>): void {
+  // If already dirty, don't process again (avoid infinite loops)
+  if ((computed as any).isDirty) return;
+
+  // Mark as dirty and schedule
+  (computed as any).isDirty = true;
+  scheduler.scheduleComputed(computed);
+
+  // Notify all dependents of this computed
+  const computedDependents = (computed as any).dependents as Set<Computed<any> | Effect>;
+  for (const dependent of computedDependents) {
+    if ('isDirty' in dependent) {
+      // It's a computed - recursively mark as dirty
+      markComputedDirty(dependent as Computed<any>);
+    } else {
+      // It's an effect - schedule it
+      scheduler.schedule(dependent as Effect);
+    }
+  }
+}
+
+/**
  * Create a reactive signal
  */
 export function signal<T>(initialValue: T): Signal<T> {
@@ -154,8 +177,7 @@ export function signal<T>(initialValue: T): Signal<T> {
       for (const dependent of dependents) {
         if ('isDirty' in dependent) {
           // It's a computed - mark as dirty and schedule
-          (dependent as any).isDirty = true;
-          scheduler.scheduleComputed(dependent as Computed<any>);
+          markComputedDirty(dependent as Computed<any>);
         } else {
           // It's an effect
           scheduler.schedule(dependent as Effect);
@@ -215,7 +237,7 @@ export function computed<T>(fn: () => T): Computed<T> {
       dependents.add(activeEffect);
     }
 
-    if (isDirty) {
+    if (isDirty || value === undefined) {
       // Store dependents before clearing dependencies
       const currentDependents = new Set(dependents);
 
@@ -245,17 +267,6 @@ export function computed<T>(fn: () => T): Computed<T> {
           // It's an effect - schedule it for re-execution
           scheduler.schedule(dependent as Effect);
         }
-      }
-    } else if (value === undefined) {
-      // First access - establish dependencies
-      const prevActiveComputed = activeComputed;
-      activeComputed = computedFn as Computed<any>;
-
-      try {
-        value = fn();
-        isDirty = false;
-      } finally {
-        activeComputed = prevActiveComputed;
       }
     }
 
@@ -416,63 +427,6 @@ export function fromPromise<T>(promise: Promise<T>): Signal<T | undefined> {
   return sig;
 }
 
-/**
- * Create a signal that debounces updates
- */
-export function debounced<T>(signal: Signal<T>, delay: number): Signal<T> {
-  let timeoutId: number | undefined;
-  const debouncedSignal = signal(undefined as T);
-
-  const originalSignal = signal;
-
-  // Override the signal to debounce updates
-  const debouncedFn = (value?: T) => {
-    if (value !== undefined) {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-
-      timeoutId = setTimeout(() => {
-        originalSignal(value);
-        timeoutId = undefined;
-      }, delay);
-
-      return originalSignal(value);
-    }
-
-    return debouncedSignal;
-  };
-
-  return debouncedFn as Signal<T>;
-}
-
-/**
- * Create a signal that throttles updates
- */
-export function throttled<T>(signal: Signal<T>, delay: number): Signal<T> {
-  let lastUpdate = 0;
-  const throttledSignal = signal(undefined as T);
-
-  const originalSignal = signal;
-
-  // Override the signal to throttle updates
-  const throttledFn = (value?: T) => {
-    if (value !== undefined) {
-      const now = Date.now();
-
-      if (now - lastUpdate >= delay) {
-        originalSignal(value);
-        lastUpdate = now;
-      }
-
-      return originalSignal(value);
-    }
-
-    return throttledSignal;
-  };
-
-  return throttledFn as Signal<T>;
-}
 
 /**
  * Utility to check if a value is a signal

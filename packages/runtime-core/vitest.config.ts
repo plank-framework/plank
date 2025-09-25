@@ -5,4 +5,9 @@ export default defineConfig({
     environment: 'node',
     globals: true,
   },
+  resolve: {
+    alias: {
+      '@plank/runtime-core': './dist/index.js'
+    }
+  }
 });

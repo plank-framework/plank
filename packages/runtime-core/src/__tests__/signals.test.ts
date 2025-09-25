@@ -11,8 +11,7 @@ import {
   derived,
   memo,
   fromPromise,
-  debounced,
-  throttled,
+  flushSync,
   isSignal,
   isComputed,
   isEffect
@@ -93,6 +92,7 @@ describe('Plank Signals', () => {
 
       expect(quadrupled()).toBe(8);
       count(3);
+      flushSync();
       expect(quadrupled()).toBe(12);
     });
 
@@ -168,8 +168,10 @@ describe('Plank Signals', () => {
       });
 
       count(5);
+      flushSync();
       stop.stop();
       count(10);
+      flushSync();
 
       return new Promise(resolve => {
         setTimeout(() => {
@@ -275,58 +277,6 @@ describe('Plank Signals', () => {
     });
   });
 
-  describe('debounced', () => {
-    test('should debounce signal updates', async () => {
-      vi.useFakeTimers();
-
-      const count = signal(0);
-      const debouncedCount = debounced(count, 100);
-      const log: number[] = [];
-
-      effect(() => {
-        log.push(debouncedCount());
-      });
-
-      count(1);
-      count(2);
-      count(3);
-
-      // Fast forward time
-      vi.advanceTimersByTime(100);
-
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      expect(log).toEqual([0, 3]);
-
-      vi.useRealTimers();
-    });
-  });
-
-  describe('throttled', () => {
-    test('should throttle signal updates', async () => {
-      vi.useFakeTimers();
-
-      const count = signal(0);
-      const throttledCount = throttled(count, 100);
-      const log: number[] = [];
-
-      effect(() => {
-        log.push(throttledCount());
-      });
-
-      count(1);
-      vi.advanceTimersByTime(50);
-      count(2);
-      vi.advanceTimersByTime(50);
-      count(3);
-
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      expect(log).toEqual([0, 1, 3]);
-
-      vi.useRealTimers();
-    });
-  });
 
   describe('type guards', () => {
     test('should identify signals', () => {

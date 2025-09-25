@@ -16,12 +16,14 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
     "composite": true,
-    "incremental": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "incremental": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "build", "**/*.test.ts", "**/*.spec.ts"]
+  "include": [],
+  "exclude": ["node_modules", "dist", "build", "**/*.test.ts", "**/*.spec.ts"],
+  "references": [
+    { "path": "./packages/compiler" },
+    { "path": "./packages/runtime-core" },
+    { "path": "./packages/cli" }
+  ]
 }

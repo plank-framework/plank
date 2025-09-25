@@ -1,0 +1,118 @@
+---
+globs: *.ts,*.js,*.plk
+description: Architecture and design principles for Plank framework components
+---
+
+# Plank Architecture & Design Principles
+
+## Layered Architecture (from [plan.md](mdc:docs/plan.md))
+
+### 1. Compiler Layer
+- Parse `.plk` templates and directives
+- Generate DOM operation IR
+- Split islands and emit server/client bundles
+- Static analysis for budgets and action boundaries
+- Dead-code elimination for unused client paths
+
+### 2. Runtime Core
+- Signals graph with fine-grained reactivity
+- Microtask scheduler for updates
+- DOM binding engine with minimal operations
+- Accessibility utilities
+
+### 3. Server Layer
+- SSR renderer with streaming HTML
+- Resumability serializer for islands
+- Actions runtime with form binding
+- Cache tag manager
+
+### 4. Router
+- File-based server router from `/app/routes`
+- Client enhancer with Navigation API
+- View Transitions for animated transitions
+- Speculation Rules for prefetch/prerender
+
+## Reactivity Model (from [requirements.md](mdc:docs/requirements.md))
+
+```typescript
+// Core primitives
+const count = signal(0);
+const doubled = computed(() => count() * 2);
+effect(() => console.log(doubled()));
+
+// Performance target: O(1) per dependent binding
+```
+
+## Template Directives (Required)
+
+```html
+<!-- Events -->
+<button on:click={handleClick}>Click me</button>
+
+<!-- Bindings -->
+<input bind:value={name} />
+
+<!-- Conditionals -->
+<div x:if={isVisible}>Content</div>
+<div x:else>Alternative</div>
+<div x:show={isActive}>Toggle visibility</div>
+
+<!-- Lists -->
+<ul>
+  <li x:for={item of items} x:key={item.id}>
+    {item.name}
+  </li>
+</ul>
+
+<!-- Classes and attributes -->
+<div class:active={isActive} attr:data-id={id}></div>
+
+<!-- Islands -->
+<island src="./Counter.plk" client:load></island>
+<island src="./Chart.plk" client:idle></island>
+<island src="./Modal.plk" client:visible></island>
+
+<!-- Server actions -->
+<form use:action={createTodo}>
+  <input name="title" required />
+  <button>Create</button>
+</form>
+```
+
+## Server Actions Pattern
+
+```typescript
+// In .plk file
+<script type="server">
+export async function createTodo(formData, ctx) {
+  // Server-side logic
+  const todo = await db.todos.create({
+    title: formData.get('title')
+  });
+
+  // Return response or redirect
+  return { success: true, todo };
+}
+</script>
+```
+
+## Resumability Requirements
+
+- Serialize reactive graph and event wiring
+- Client resumes without re-executing constructors
+- Fallback to partial hydration when resumability fails
+- SSR serialization markers for resumability
+
+## Security Standards
+
+- CSRF protection for actions
+- HTML escaping by default
+- Content Security Policy recommendations
+- Safe directive parsing with XSS protection
+
+## Performance Requirements
+
+- Zero JS on static routes unless islands present
+- Streaming SSR with progressive reveal
+- Budget enforcement in CI
+- "What ships" analysis reports

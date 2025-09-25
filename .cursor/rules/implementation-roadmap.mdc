@@ -1,0 +1,185 @@
+---
+description: Implementation roadmap and task tracking for Plank framework development
+---
+
+# Plank Implementation Roadmap & Task Tracking
+
+## Phase Structure (from [tasks.md](mdc:docs/tasks.md))
+
+### Phase A – Foundations (8 weeks)
+**Goal**: End-to-end SSR with HTML templates, signals, basic islands, and dev server
+
+#### Core Tasks (1.1-1.10)
+- **1.1**: Define `.plk` grammar and directive list
+- **1.2**: Implement parser and generate DOM operation IR
+- **1.3**: Build `@plank/runtime-core` signals graph and scheduler
+- **1.4**: Create DOM binding runtime with minimal operations
+- **1.5**: Implement server renderer with streaming HTML
+- **1.6**: File-based router with nested layouts
+- **1.7**: Islands detection and code-splitting
+- **1.8**: Dev server with Vite plugin and HMR
+- **1.9**: CLI with starter template
+- **1.10**: Example apps: `marketing-zero-js` and `island-counter`
+
+#### Exit Criteria
+- Todo MVC demo with <10 KB client bundle for island page
+
+### Phase B – Advanced Rendering & Data (10 weeks)
+**Goal**: Resumability, actions, streaming, cache tags, budgets
+
+#### Core Tasks (2.1-2.10)
+- **2.1**: Define serialization schema for resumability
+- **2.2**: Implement server serializer embedding signals graph
+- **2.3**: Client bootstrap to resume without re-executing constructors
+- **2.4**: Partial hydration fallback for non-resumable routes
+- **2.5**: Server actions runtime with form binding
+- **2.6**: Optimistic UI updates and rollback logic
+- **2.7**: Cache tagging API with server/edge/client adapters
+- **2.8**: Streaming SSR with progressive reveal
+- **2.9**: Budgets analyzer CLI enforcing per-route JS limits
+- **2.10**: Example apps: dashboard-actions, streaming-list, cache-tags
+
+#### Exit Criteria
+- Dashboard example with streaming table and optimistic form updates
+- Budgets enforced in CI
+
+### Phase C – Platform UX & Ecosystem (12 weeks)
+**Goal**: SPA polish via platform APIs, interop, plugins, docs, and adapters
+
+#### Core Tasks (3.1-3.8)
+- **3.1**: Router client enhancer with Navigation API + View Transitions
+- **3.2**: Speculation Rules helper for prefetch/prerender
+- **3.3**: Interop wrappers for React, Svelte, and Vue as islands
+- **3.4**: UI primitives with full ARIA compliance
+- **3.5**: Plugin API and sample plugins (i18n, icon inlining)
+- **3.6**: Adapters for Node 20+, Bun, Edge, and Deno
+- **3.7**: Documentation site with live playground and 20+ guides
+- **3.8**: Bench harness comparing Plank vs Next
+
+#### Exit Criteria
+- Public beta with complete documentation and 3+ starter templates
+
+## Repository Setup (Tasks 0.1-0.5)
+
+### 0.1 Monorepo Bootstrap
+```bash
+# Required setup
+pnpm init
+pnpm add -D turborepo typescript
+mkdir packages
+```
+
+### 0.2 License & README
+- Apache 2.0 LICENSE file
+- Project-wide README with overview
+- Contributing guidelines
+
+### 0.3 TypeScript Configuration
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "ESNext"
+  }
+}
+```
+
+### 0.4 CI Matrix
+```yaml
+# .github/workflows/ci.yml
+strategy:
+  matrix:
+    runtime: [node-20, bun-latest, deno-latest]
+```
+
+### 0.5 Changesets
+```bash
+pnpm add -D @changesets/cli
+pnpm changeset init
+```
+
+## Cross-cutting Tasks (4.1-4.6)
+
+### 4.1 Error Handling
+- Directive-level diagnostics
+- Graceful fallbacks
+- Clear error messages
+
+### 4.2 Security Hardening
+- CSRF middleware
+- Default HTML escaping
+- CSP recommendations
+
+### 4.3 Telemetry
+- Opt-in anonymous usage metrics
+- CLI switch: `--telemetry=on|off`
+
+### 4.4 Accessibility
+- Automated accessibility sweeps
+- Manual accessibility audits
+- ARIA compliance testing
+
+### 4.5 Contributor Experience
+- RFC template
+- Issue templates
+- "Good first issue" labels
+
+### 4.6 Release Channels
+- Nightly canaries
+- Weekly alphas
+- Monthly betas
+
+## Success Metrics
+
+### Technical Metrics
+- Real sites ship 0-10 KB JS on most routes
+- Beat Next.js by ≥20% on main-thread time and initial JS
+- Build size per route analysis
+- Action latency and optimistic success rate
+
+### Community Metrics
+- Positive developer feedback from 5+ pilot teams
+- Active contributor base
+- Documentation completeness
+- Example application quality
+
+## Risk Mitigation
+
+### Resumability Complexity
+- Strict serialization schema
+- Fallback to partial hydration
+- Comprehensive testing
+
+### Runtime Divergence
+- Isolate adapters
+- CI matrix across all runtimes
+- Compatibility testing
+
+### SEO for "Plank"
+- Consistent branding as "Plank Framework"
+- Clear npm scope: `@plank/*`
+- Distinctive documentation
+
+## Timeline Summary
+- **Phase A**: ~8 weeks (Foundations)
+- **Phase B**: ~10 weeks (Advanced features)
+- **Phase C**: ~12 weeks (Ecosystem)
+- **Public beta**: ~30 weeks from project start
+
+## Task Dependencies
+
+```mermaid
+graph TD
+    A[0.1-0.5: Repo Setup] --> B[1.1-1.3: Core Parser & Runtime]
+    B --> C[1.4-1.6: DOM & SSR]
+    C --> D[1.7-1.10: Islands & Dev Server]
+    D --> E[2.1-2.4: Resumability]
+    E --> F[2.5-2.7: Actions & Cache]
+    F --> G[2.8-2.10: Streaming & Budgets]
+    G --> H[3.1-3.3: Platform APIs & Interop]
+    H --> I[3.4-3.6: UI & Adapters]
+    I --> J[3.7-3.8: Docs & Benchmarks]
+```
+
+**Every task must be completed according to the specifications in [requirements.md](mdc:docs/requirements.md) and [plan.md](mdc:docs/plan.md).**

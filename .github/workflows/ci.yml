@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.runtime }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runtime: [node-20, bun-latest, deno-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: matrix.runtime == 'node-20'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Setup Bun
+        if: matrix.runtime == 'bun-latest'
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Deno
+        if: matrix.runtime == 'deno-latest'
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: latest
+
+      - name: Install dependencies
+        if: matrix.runtime == 'node-20' || matrix.runtime == 'bun-latest'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install dependencies (Deno)
+        if: matrix.runtime == 'deno-latest'
+        run: deno install --allow-all
+
+      - name: Type check
+        if: matrix.runtime == 'node-20'
+        run: pnpm type-check
+
+      - name: Lint
+        if: matrix.runtime == 'node-20'
+        run: pnpm lint
+
+      - name: Test
+        if: matrix.runtime == 'node-20'
+        run: pnpm test
+
+      - name: Build
+        if: matrix.runtime == 'node-20'
+        run: pnpm build
+
+      - name: Test with Bun
+        if: matrix.runtime == 'bun-latest'
+        run: bun test
+
+      - name: Test with Deno
+        if: matrix.runtime == 'deno-latest'
+        run: deno test --allow-all
+
+  budget-check:
+    name: Budget Check
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Analyze budgets
+        run: pnpm analyze --fail-on-budget-exceeded
+
+  changeset:
+    name: Changeset Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for changeset
+        run: pnpm changeset status

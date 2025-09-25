@@ -1,0 +1,80 @@
+---
+alwaysApply: true
+description: Core Plank framework development guidelines and specifications
+---
+
+# Plank Framework Development Bible
+
+This rule serves as the authoritative guide for all Plank framework development. Reference these documents as the source of truth:
+
+- [requirements.md](mdc:docs/requirements.md) - Complete framework specifications and goals
+- [plan.md](mdc:docs/plan.md) - Architecture overview and roadmap phases
+- [tasks.md](mdc:docs/tasks.md) - Granular task breakdown and implementation roadmap
+
+## Core Principles (Non-negotiable)
+
+1. **HTML-first, JavaScript minimal** - Ship near-zero JS by default
+2. **Progressive enhancement** - Works without JavaScript, enhanced with it
+3. **Fine-grained reactivity** - Signals over virtual DOM re-renders
+4. **Server actions** - Form-based mutations over ad-hoc client fetches
+5. **Web standards first** - Use platform APIs before custom solutions
+6. **Performance as feature** - Measurable budgets with CI enforcement
+
+## Technical Constraints
+
+- **Runtime**: Node 20+ (primary), Bun, Edge, Deno (optional)
+- **Language**: TypeScript 5.x strict mode only
+- **Module format**: Pure ESM output
+- **Package manager**: PNPM 9+
+- **Build tool**: Turborepo with caching
+- **License**: Apache 2.0
+
+## Template Language Rules
+
+- Use `.plk` extension for templates
+- HTML with directive layer, NO JSX
+- Required directives: `on:click`, `bind:value`, `x:if`, `x:for`, `class:active`
+- Islands: `<island src="./Component.plk" client:load|idle|visible>`
+- Server actions: `<form use:action={handler}>`
+
+## Performance Budgets (Enforced)
+
+- Marketing routes: ≤10 KB gzip JS
+- App routes: ≤35 KB gzip initial JS
+- Zero JS on static routes unless islands present
+- Build fails when budgets exceeded
+
+## Package Structure
+
+Follow the exact topology from [plan.md](mdc:docs/plan.md):
+```
+packages/
+├── compiler
+├── runtime-core
+├── runtime-dom
+├── router
+├── ssr
+├── resume
+├── actions
+├── cache
+├── cli
+├── dev-server
+├── adapters/{node,bun,edge,deno}
+├── interop/{react,svelte,vue}
+└── ui-primitives
+```
+
+## Development Phases
+
+Follow the exact phase structure from [tasks.md](mdc:docs/tasks.md):
+- **Phase A**: Foundations (SSR, signals, islands, dev server)
+- **Phase B**: Advanced rendering (resumability, actions, streaming, budgets)
+- **Phase C**: Platform UX (Navigation API, View Transitions, interop, docs)
+
+## Success Criteria
+
+- Real sites ship 0-10 KB JS on most routes
+- Beat Next.js by ≥20% on main-thread time and initial JS
+- Positive feedback from 5+ pilot teams
+
+**Every implementation decision must align with these specifications. When in doubt, refer to the source documents.**

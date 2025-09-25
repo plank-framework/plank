@@ -1,0 +1,151 @@
+---
+globs: *.ts,*.js,*.json,*.md
+description: Development workflow, standards, and tooling requirements
+---
+
+# Plank Development Workflow & Standards
+
+## Monorepo Setup (from [plan.md](mdc:docs/plan.md))
+
+### Required Tools
+- **Package Manager**: PNPM 9+ (mandatory)
+- **Build Orchestration**: Turborepo with incremental caching
+- **Language**: TypeScript 5.x strict mode
+- **Module Format**: ESM only output
+- **CI Matrix**: Node 20, Bun latest, Deno latest
+
+### Package Structure
+```
+packages/
+├── compiler/          # Template parser and code generation
+├── runtime-core/      # Signals and scheduler
+├── runtime-dom/       # DOM bindings
+├── router/           # File-based routing
+├── ssr/              # Server-side rendering
+├── resume/           # Resumability serialization
+├── actions/          # Server actions runtime
+├── cache/            # Cache tag management
+├── cli/              # Command-line interface
+├── dev-server/       # Development server
+├── adapters/         # Runtime adapters
+│   ├── node/         # Node 20+ (primary)
+│   ├── bun/          # High-performance SSR
+│   ├── edge/         # Cloudflare/Vercel Workers
+│   └── deno/         # Optional Deno support
+├── interop/          # Framework interop
+│   ├── react/        # React component wrapper
+│   ├── svelte/       # Svelte component wrapper
+│   └── vue/          # Vue component wrapper
+└── ui-primitives/    # Accessible UI components
+```
+
+## Development Commands
+
+```bash
+# CLI commands (from [requirements.md](mdc:docs/requirements.md))
+plank create <project-name>    # Scaffold new project
+plank dev                      # Development server
+plank build                    # Production build
+plank preview                  # Preview production build
+plank analyze                  # Budget analysis and "what ships" report
+```
+
+## File Naming Conventions
+
+- Templates: `.plk` extension
+- Config: `plank.config.ts`
+- Package scope: `@plank/*`
+- CLI: `plank` (not `plank-cli`)
+
+## TypeScript Configuration
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true
+  }
+}
+```
+
+## Testing Requirements
+
+- **Unit Tests**: Vitest
+- **E2E Tests**: Playwright
+- **Benchmarks**: Performance comparison with Next.js
+- **Coverage**: Minimum 80% for core packages
+
+## Code Quality Standards
+
+### Error Handling
+- Directive-level diagnostics
+- Graceful fallbacks for resumability failures
+- Clear error messages with actionable suggestions
+
+### Documentation
+- JSDoc for all public APIs
+- README for each package
+- Examples for complex features
+- RFC process for breaking changes
+
+### Git Workflow
+- Conventional commits
+- Changesets for versioning
+- Canary releases for testing
+- Release channels: nightly, weekly alpha, monthly beta
+
+## Performance Monitoring
+
+### Metrics to Track
+- Build size per route
+- Initial JS bytes
+- Time to Interactive (TTI)
+- Main-thread time
+- Largest Contentful Paint (LCP)
+- Action latency
+- Optimistic update success rate
+
+### Budget Enforcement
+```typescript
+// Budget configuration
+const budgets = {
+  marketing: 10 * 1024,  // 10 KB gzip
+  app: 35 * 1024,        // 35 KB gzip
+  static: 0              // Zero JS unless islands
+};
+```
+
+## Security Checklist
+
+- [ ] CSRF protection for server actions
+- [ ] HTML escaping by default
+- [ ] Content Security Policy headers
+- [ ] Secure directive parsing
+- [ ] Input validation and sanitization
+
+## Accessibility Requirements
+
+- [ ] ARIA compliance for UI primitives
+- [ ] Focus management utilities
+- [ ] Screen reader compatibility
+- [ ] Keyboard navigation support
+- [ ] Color contrast compliance
+
+## Telemetry (Opt-in)
+
+```bash
+# CLI telemetry control
+plank --telemetry=on|off
+```
+
+- Anonymous usage metrics
+- Performance data collection
+- Error reporting (with user consent)
+- Feature usage analytics

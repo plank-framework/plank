@@ -1,0 +1,219 @@
+---
+globs: *.ts,*.js,*.plk,*.json
+description: Performance requirements and budget enforcement for Plank framework
+---
+
+# Plank Performance & Budget Enforcement
+
+## Performance Requirements (from [requirements.md](mdc:docs/requirements.md))
+
+### JavaScript Budgets (Non-negotiable)
+- **Marketing routes**: ≤10 KB gzip JavaScript
+- **App routes**: ≤35 KB gzip initial JavaScript
+- **Static routes**: 0 KB JavaScript (unless islands present)
+- **Build fails** when budgets are exceeded
+
+### Performance Targets
+- Beat Next.js by ≥20% on main-thread time and initial JS
+- Real sites ship 0-10 KB JS on most routes
+- SPA-quality UX with MPA-style cost
+
+## Budget Enforcement Implementation
+
+### CLI Analysis Command
+```bash
+plank analyze                    # Full budget analysis
+plank analyze --route=/dashboard # Per-route analysis
+plank analyze --budget=marketing # Marketing budget check
+```
+
+### Budget Configuration
+```typescript
+// plank.config.ts
+export default {
+  budgets: {
+    marketing: {
+      js: 10 * 1024,        // 10 KB gzip
+      description: "Marketing pages with minimal interactivity"
+    },
+    app: {
+      js: 35 * 1024,        // 35 KB gzip
+      description: "Application routes with full functionality"
+    },
+    static: {
+      js: 0,                // Zero JS
+      description: "Static content pages"
+    }
+  }
+};
+```
+
+### "What Ships" Report
+```typescript
+interface ShipReport {
+  route: string;
+  jsBytes: number;
+  budget: number;
+  status: 'pass' | 'warn' | 'fail';
+  breakdown: {
+    runtime: number;
+    islands: number;
+    vendor: number;
+    app: number;
+  };
+}
+```
+
+## Performance Monitoring
+
+### Core Web Vitals
+- **LCP**: Largest Contentful Paint
+- **FID**: First Input Delay
+- **CLS**: Cumulative Layout Shift
+- **TTI**: Time to Interactive
+- **Main-thread time**: JavaScript execution time
+
+### Framework-Specific Metrics
+- **Island hydration time**: Time to make islands interactive
+- **Action latency**: Server action response time
+- **Resumability success rate**: Percentage of successful resumes
+- **Streaming efficiency**: Time to first byte vs. complete render
+
+## Optimization Strategies
+
+### Zero-JS Routes
+```html
+<!-- Static marketing page - 0 KB JS -->
+<!DOCTYPE html>
+<html>
+<head><title>Marketing</title></head>
+<body>
+  <h1>Welcome to Plank</h1>
+  <p>This page ships zero JavaScript</p>
+</body>
+</html>
+```
+
+### Island-Based Interactivity
+```html
+<!-- Only interactive elements as islands -->
+<main>
+  <h1>Product Page</h1>
+  <p>Static content - no JS needed</p>
+
+  <!-- Only this counter needs JavaScript -->
+  <island src="./ProductCounter.plk" client:idle>
+    <div>Loading counter...</div>
+  </island>
+</main>
+```
+
+### Streaming SSR
+```typescript
+// Progressive content loading
+export async function renderStream(route: string) {
+  return new ReadableStream({
+    start(controller) {
+      // Send HTML shell immediately
+      controller.enqueue(renderShell(route));
+
+      // Stream dynamic content as it loads
+      loadData(route).then(data => {
+        controller.enqueue(renderContent(data));
+        controller.close();
+      });
+    }
+  });
+}
+```
+
+## Budget Analysis Tools
+
+### Bundle Analyzer
+```typescript
+interface BundleAnalysis {
+  totalSize: number;
+  chunks: ChunkInfo[];
+  islands: IslandInfo[];
+  unused: string[];
+  recommendations: string[];
+}
+
+interface ChunkInfo {
+  name: string;
+  size: number;
+  modules: ModuleInfo[];
+}
+
+interface IslandInfo {
+  name: string;
+  size: number;
+  loadStrategy: 'load' | 'idle' | 'visible';
+  dependencies: string[];
+}
+```
+
+### CI Integration
+```yaml
+# .github/workflows/budget-check.yml
+name: Budget Check
+on: [pull_request]
+jobs:
+  budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: pnpm install
+      - run: plank analyze --fail-on-budget-exceeded
+```
+
+## Performance Testing
+
+### Benchmark Suite
+```typescript
+// benchmarks/plank-vs-next.ts
+import { benchmark } from '@plank/bench';
+
+benchmark('Initial JS Bundle', {
+  plank: () => measureBundleSize('plank-app'),
+  nextjs: () => measureBundleSize('next-app')
+});
+
+benchmark('Time to Interactive', {
+  plank: () => measureTTI('plank-app'),
+  nextjs: () => measureTTI('next-app')
+});
+```
+
+### Lighthouse Integration
+```typescript
+// Automated performance testing
+export async function runLighthouseAudit(url: string) {
+  const results = await lighthouse(url, {
+    performance: true,
+    accessibility: true,
+    'best-practices': true,
+    seo: true
+  });
+
+  return {
+    performance: results.lhr.categories.performance.score,
+    jsBudget: results.lhr.audits['unused-javascript'],
+    recommendations: results.lhr.audits['render-blocking-resources']
+  };
+}
+```
+
+## Performance Anti-patterns to Avoid
+
+❌ **Don't**: Ship entire framework to every route
+❌ **Don't**: Use client-side routing for static content
+❌ **Don't**: Bundle vendor libraries with app code
+❌ **Don't**: Load all islands immediately
+❌ **Don't**: Ignore bundle size in development
+
+✅ **Do**: Use islands for interactivity only
+✅ **Do**: Stream server-rendered content
+✅ **Do**: Lazy load non-critical features
+✅ **Do**: Monitor budgets in CI
+✅ **Do**: Optimize for Core Web Vitals

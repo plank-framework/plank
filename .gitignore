@@ -108,3 +108,6 @@ Thumbs.db
 .plank-cache/
 *.plk.js
 *.plk.d.ts
+
+# Local documentation (not for open source)
+docs-local/

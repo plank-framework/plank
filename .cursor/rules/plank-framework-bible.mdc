@@ -7,9 +7,9 @@ description: Core Plank framework development guidelines and specifications
 
 This rule serves as the authoritative guide for all Plank framework development. Reference these documents as the source of truth:
 
-- [requirements.md](mdc:docs/requirements.md) - Complete framework specifications and goals
-- [plan.md](mdc:docs/plan.md) - Architecture overview and roadmap phases
-- [tasks.md](mdc:docs/tasks.md) - Granular task breakdown and implementation roadmap
+- [requirements.md](mdc:docs-local/versions/v1/requirements.md) - Complete framework specifications and goals
+- [plan.md](mdc:docs-local/versions/v1/plan.md) - Architecture overview and roadmap phases
+- [tasks.md](mdc:docs-local/versions/v1/tasks.md) - Granular task breakdown and implementation roadmap
 
 ## Core Principles (Non-negotiable)
 
@@ -66,10 +66,21 @@ packages/
 
 ## Development Phases
 
-Follow the exact phase structure from [tasks.md](mdc:docs/tasks.md):
+Follow the exact phase structure from [tasks.md](mdc:docs-local/versions/v1/tasks.md):
 - **Phase A**: Foundations (SSR, signals, islands, dev server)
 - **Phase B**: Advanced rendering (resumability, actions, streaming, budgets)
 - **Phase C**: Platform UX (Navigation API, View Transitions, interop, docs)
+
+## Documentation Standards
+
+### Public Documentation
+- **`docs/`** - Only commit documentation intended for open source (currently empty)
+- **Source of truth**: requirements.md, plan.md, tasks.md (versioned in docs-local/versions/)
+
+### Local Documentation
+- **`docs-local/`** - All development notes, implementation details, and personal observations
+- **Git ignored**: Automatically excluded from version control
+- **AI-generated docs**: Place all `.md` files created during development in `docs-local/` unless specifically intended for public repository
 
 ## Success Criteria
 

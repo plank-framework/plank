@@ -5,7 +5,7 @@ description: Performance requirements and budget enforcement for Plank framework
 
 # Plank Performance & Budget Enforcement
 
-## Performance Requirements (from [requirements.md](mdc:docs/requirements.md))
+## Performance Requirements (from [requirements.md](mdc:docs-local/versions/v1/requirements.md))
 
 ### JavaScript Budgets (Non-negotiable)
 - **Marketing routes**: ≤10 KB gzip JavaScript

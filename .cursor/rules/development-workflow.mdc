@@ -5,7 +5,7 @@ description: Development workflow, standards, and tooling requirements
 
 # Plank Development Workflow & Standards
 
-## Monorepo Setup (from [plan.md](mdc:docs/plan.md))
+## Monorepo Setup (from [plan.md](mdc:docs-local/versions/v1/plan.md))
 
 ### Required Tools
 - **Package Manager**: PNPM 9+ (mandatory)
@@ -42,7 +42,7 @@ packages/
 ## Development Commands
 
 ```bash
-# CLI commands (from [requirements.md](mdc:docs/requirements.md))
+# CLI commands (from [requirements.md](mdc:docs-local/versions/v1/requirements.md))
 plank create <project-name>    # Scaffold new project
 plank dev                      # Development server
 plank build                    # Production build
@@ -137,6 +137,30 @@ const budgets = {
 - [ ] Screen reader compatibility
 - [ ] Keyboard navigation support
 - [ ] Color contrast compliance
+
+## Documentation Organization
+
+### Public Documentation (`docs/`)
+- Currently empty - only commit documentation intended for open source
+- Will contain user-facing documentation, API docs, and guides when ready
+
+### Local Documentation (`docs-local/`)
+**This folder is git-ignored and contains development-only documentation:**
+
+- `versions/v1/requirements.md` - Complete framework specifications and goals
+- `versions/v1/plan.md` - Architecture overview and roadmap phases
+- `versions/v1/tasks.md` - Granular task breakdown and implementation roadmap
+- `setup-summary.md` - Comprehensive setup status and current state
+- `implementation/` - Implementation notes and detailed planning
+- `decisions/` - Architecture decisions and design rationale
+- `notes/` - Development notes and observations
+- `research/` - Research and investigation notes
+
+### Documentation Guidelines
+- **Public docs**: Only commit documentation intended for open source
+- **Local docs**: All development notes, personal observations, and implementation details go in `docs-local/`
+- **AI-generated docs**: Any `.md` files created during development should go in `docs-local/` unless specifically intended for public repository
+- **Git ignore**: `docs-local/` is automatically ignored by git
 
 ## Telemetry (Opt-in)
 

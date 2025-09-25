@@ -4,7 +4,7 @@ description: Implementation roadmap and task tracking for Plank framework develo
 
 # Plank Implementation Roadmap & Task Tracking
 
-## Phase Structure (from [tasks.md](mdc:docs/tasks.md))
+## Phase Structure (from [tasks.md](mdc:docs-local/versions/v1/tasks.md))
 
 ### Phase A – Foundations (8 weeks)
 **Goal**: End-to-end SSR with HTML templates, signals, basic islands, and dev server
@@ -182,4 +182,4 @@ graph TD
     I --> J[3.7-3.8: Docs & Benchmarks]
 ```
 
-**Every task must be completed according to the specifications in [requirements.md](mdc:docs/requirements.md) and [plan.md](mdc:docs/plan.md).**
+**Every task must be completed according to the specifications in [requirements.md](mdc:docs-local/versions/v1/requirements.md) and [plan.md](mdc:docs-local/versions/v1/plan.md).**

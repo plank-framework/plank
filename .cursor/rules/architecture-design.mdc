@@ -5,7 +5,7 @@ description: Architecture and design principles for Plank framework components
 
 # Plank Architecture & Design Principles
 
-## Layered Architecture (from [plan.md](mdc:docs/plan.md))
+## Layered Architecture (from [plan.md](mdc:docs-local/versions/v1/plan.md))
 
 ### 1. Compiler Layer
 - Parse `.plk` templates and directives
@@ -32,7 +32,7 @@ description: Architecture and design principles for Plank framework components
 - View Transitions for animated transitions
 - Speculation Rules for prefetch/prerender
 
-## Reactivity Model (from [requirements.md](mdc:docs/requirements.md))
+## Reactivity Model (from [requirements.md](mdc:docs-local/versions/v1/requirements.md))
 
 ```typescript
 // Core primitives

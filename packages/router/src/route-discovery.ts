@@ -102,7 +102,7 @@ function parseRouteFile(
   const dirPath = dirname(relativePath);
 
   // Determine file type
-  const fileType = determineFileType(fileName);
+  const fileType = determineFileType(fileName, filePath);
   if (!fileType) {
     return null;
   }
@@ -130,12 +130,20 @@ function parseRouteFile(
 /**
  * Determine the type of route file
  */
-function determineFileType(fileName: string): RouteFileType | null {
+function determineFileType(fileName: string, filePath: string): RouteFileType | null {
+  // Check specific patterns first
   for (const [type, pattern] of Object.entries(ROUTE_PATTERNS)) {
     if (pattern.test(fileName)) {
       return type as RouteFileType;
     }
   }
+
+  // If no specific pattern matches, check if it's a .plk file
+  // Any .plk file that doesn't match specific patterns is treated as a page route
+  if (filePath.endsWith('.plk')) {
+    return 'page';
+  }
+
   return null;
 }
 

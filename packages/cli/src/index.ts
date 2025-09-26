@@ -6,6 +6,14 @@
  */
 
 import { program } from 'commander';
+import { buildCommand } from './commands/build.js';
+import { createCommand } from './commands/create.js';
+import { devCommand } from './commands/dev.js';
+import { previewCommand } from './commands/preview.js';
+
+export type { PlankConfig } from './config.js';
+// Export configuration helpers for use in plank.config.ts files
+export { defineConfig } from './define-config.js';
 
 program
   .name('plank')
@@ -15,38 +23,43 @@ program
 program
   .command('create <project-name>')
   .description('Create a new Plank project')
-  .action((projectName: string) => {
-    console.log(`Creating new Plank project: ${projectName}`);
-    // TODO: Implement project creation
-    // This is a placeholder for Phase A implementation
+  .option('-t, --template <template>', 'Project template to use')
+  .option('--typescript', 'Use TypeScript')
+  .option('--tailwind', 'Include Tailwind CSS')
+  .action(async (projectName: string, options) => {
+    await createCommand(projectName, options);
   });
 
 program
   .command('dev')
   .description('Start development server')
   .option('-p, --port <port>', 'Port to run the dev server on', '3000')
-  .action((options) => {
-    console.log(`Starting development server on port ${options.port}`);
-    // TODO: Implement dev server
-    // This is a placeholder for Phase A implementation
+  .option('-h, --host <host>', 'Host to bind the server to', 'localhost')
+  .option('--no-open', "Don't open browser automatically")
+  .option('--routes-dir <dir>', 'Routes directory', './app/routes')
+  .option('--https', 'Enable HTTPS')
+  .action(async (options) => {
+    await devCommand(options);
   });
 
 program
   .command('build')
   .description('Build the project for production')
-  .action(() => {
-    console.log('Building project for production...');
-    // TODO: Implement build process
-    // This is a placeholder for Phase A implementation
+  .option('-o, --output <dir>', 'Output directory', './dist')
+  .option('--no-minify', 'Disable minification')
+  .option('--sourcemap', 'Generate source maps')
+  .action(async (options) => {
+    await buildCommand(options);
   });
 
 program
   .command('preview')
   .description('Preview the production build')
-  .action(() => {
-    console.log('Starting preview server...');
-    // TODO: Implement preview server
-    // This is a placeholder for Phase A implementation
+  .option('-p, --port <port>', 'Port to run the preview server on', '3000')
+  .option('-h, --host <host>', 'Host to bind the server to', 'localhost')
+  .option('-d, --dist <dir>', 'Build output directory', './dist')
+  .action(async (options) => {
+    await previewCommand(options);
   });
 
 program

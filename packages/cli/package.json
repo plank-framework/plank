@@ -24,7 +24,11 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "commander": "^12.0.0"
+    "commander": "^12.0.0",
+    "@plank/dev-server": "workspace:*",
+    "@plank/router": "workspace:*",
+    "@plank/compiler": "workspace:*",
+    "@plank/ssr": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

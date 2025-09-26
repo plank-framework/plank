@@ -2,8 +2,30 @@
  * @fileoverview Core server-side rendering engine
  */
 
-import { parse, type ParseResult } from '@plank/compiler';
-import type { SSRContext, SSRResult, TemplateRenderer, StreamingOptions } from './types.js';
+import { type ParseResult, parse, type TemplateNode } from '@plank/compiler';
+import type { SSRContext, SSRResult, StreamingOptions } from './types.js';
+
+// Extended node types for SSR rendering
+interface CommentNode extends TemplateNode {
+  type: 'comment';
+  content: string;
+}
+
+interface DirectiveNode extends TemplateNode {
+  type: 'directive';
+  element?: TemplateNode;
+}
+
+interface IslandNode extends TemplateNode {
+  type: 'island';
+  props?: Record<string, unknown>;
+}
+
+interface ScriptNode extends TemplateNode {
+  type: 'script';
+  scriptType?: string;
+  content: string;
+}
 
 /**
  * HTML streaming writer
@@ -79,17 +101,7 @@ export class StreamingWriter {
    * Escape attribute value
    */
   private escapeAttribute(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  /**
-   * Escape attribute value (alias for consistency)
-   */
-  private escapeAttributeValue(value: string): string {
-    return this.escapeAttribute(value);
+    return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 }
 
@@ -97,29 +109,33 @@ export class StreamingWriter {
  * Server-side renderer
  */
 export class SSRRenderer {
-  constructor(private config: {
-    templateDir: string;
-    assetsDir: string;
-    baseUrl: string;
-    streaming: boolean;
-  }) {}
+  constructor(
+    private config: {
+      templateDir: string;
+      assetsDir: string;
+      baseUrl: string;
+      streaming: boolean;
+    }
+  ) {}
 
   /**
    * Render template to HTML
    */
   async render(templatePath: string, context: SSRContext): Promise<SSRResult> {
     const startTime = performance.now();
-    
+
     try {
       // Parse template
       const templateContent = await this.loadTemplate(templatePath);
       const parseResult = parse(templateContent, {
         filename: templatePath,
-        dev: false
+        dev: false,
       });
 
       if (parseResult.errors.length > 0) {
-        throw new Error(`Template parsing failed: ${parseResult.errors.map(e => e.message).join(', ')}`);
+        throw new Error(
+          `Template parsing failed: ${parseResult.errors.map((e) => e.message).join(', ')}`
+        );
       }
 
       // Create streaming writer
@@ -128,7 +144,7 @@ export class SSRRenderer {
 
       // Render template
       const html = await this.renderTemplate(parseResult, context, writer);
-      
+
       const renderTime = performance.now() - startTime;
 
       // Create result
@@ -138,8 +154,8 @@ export class SSRRenderer {
           renderTime,
           islandCount: parseResult.islands.length,
           actionCount: parseResult.actions.length,
-          htmlSize: html.length
-        }
+          htmlSize: html.length,
+        },
       };
 
       // Add streaming if enabled
@@ -149,7 +165,9 @@ export class SSRRenderer {
 
       return result;
     } catch (error: unknown) {
-      throw new Error(`SSR rendering failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `SSR rendering failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -179,7 +197,7 @@ export class SSRRenderer {
     writer: StreamingWriter
   ): Promise<string> {
     // Render the AST to HTML
-    if (parseResult.ast && parseResult.ast.children) {
+    if (parseResult.ast?.children) {
       for (const child of parseResult.ast.children) {
         this.renderNode(child, context, writer);
       }
@@ -190,28 +208,28 @@ export class SSRRenderer {
   /**
    * Render a single AST node
    */
-  private renderNode(node: any, context: SSRContext, writer: StreamingWriter): void {
+  private renderNode(node: TemplateNode, context: SSRContext, writer: StreamingWriter): void {
     if (node.type === 'element') {
       this.renderElement(node, context, writer);
     } else if (node.type === 'text') {
-      writer.writeEscaped(node.text || node.content || '');
+      writer.writeEscaped(node.text || '');
     } else if (node.type === 'comment') {
-      writer.write(`<!--${node.content}-->`);
+      writer.write(`<!--${(node as CommentNode).content}-->`);
     } else if (node.type === 'directive') {
-      this.renderDirective(node, context, writer);
+      this.renderDirective(node as DirectiveNode, context, writer);
     } else if (node.type === 'island') {
-      this.renderIsland(node, context, writer);
+      this.renderIsland(node as IslandNode, context, writer);
     } else if (node.type === 'script') {
-      this.renderScript(node, context, writer);
+      this.renderScript(node as ScriptNode, context, writer);
     }
   }
 
   /**
    * Render HTML element
    */
-  private renderElement(node: any, context: SSRContext, writer: StreamingWriter): void {
+  private renderElement(node: TemplateNode, context: SSRContext, writer: StreamingWriter): void {
     writer.write(`<${node.tag}`);
-    
+
     // Render attributes
     if (node.attributes) {
       for (const [name, value] of Object.entries(node.attributes)) {
@@ -236,13 +254,13 @@ export class SSRRenderer {
   /**
    * Render directive (server-side)
    */
-  private renderDirective(node: any, context: SSRContext, writer: StreamingWriter): void {
+  private renderDirective(node: DirectiveNode, context: SSRContext, writer: StreamingWriter): void {
     // Most directives are client-side only
     // Server-side rendering focuses on static content
-    if (node.name === 'x:if' && !this.evaluateCondition(node.value, context)) {
+    if (node.directive?.name === 'x:if' && !this.evaluateCondition(node.directive.value, context)) {
       return; // Skip rendering if condition is false
     }
-    
+
     // For other directives, render the element without the directive
     if (node.element) {
       this.renderElement(node.element, context, writer);
@@ -252,23 +270,23 @@ export class SSRRenderer {
   /**
    * Render island component
    */
-  private renderIsland(node: any, context: SSRContext, writer: StreamingWriter): void {
+  private renderIsland(node: IslandNode, context: SSRContext, writer: StreamingWriter): void {
     const islandId = `island-${Math.random().toString(36).substr(2, 9)}`;
-    
-    writer.write(`<div data-island="${islandId}" data-src="${node.src}"`);
-    
-    if (node.strategy) {
-      writer.write(` data-strategy="${node.strategy}"`);
+
+    writer.write(`<div data-island="${islandId}" data-src="${node.island?.src || ''}"`);
+
+    if (node.island?.strategy) {
+      writer.write(` data-strategy="${node.island.strategy}"`);
     }
-    
+
     if (node.props) {
       writer.write(` data-props="`);
       writer.writeAttribute(JSON.stringify(node.props));
       writer.write(`"`);
     }
-    
+
     writer.write('>');
-    
+
     // Render placeholder content
     if (node.children && node.children.length > 0) {
       for (const child of node.children) {
@@ -277,22 +295,22 @@ export class SSRRenderer {
     } else {
       writer.write('<!-- Island placeholder -->');
     }
-    
+
     writer.write('</div>');
   }
 
   /**
    * Render script block
    */
-  private renderScript(node: any, context: SSRContext, writer: StreamingWriter): void {
+  private renderScript(node: ScriptNode, _context: SSRContext, writer: StreamingWriter): void {
     writer.write('<script');
-    
-    if (node.type) {
-      writer.write(` type="${node.type}"`);
+
+    if (node.scriptType) {
+      writer.write(` type="${node.scriptType}"`);
     }
-    
+
     writer.write('>');
-    writer.write(node.content);
+    writer.write(node.content || '');
     writer.write('</script>');
   }
 
@@ -300,33 +318,241 @@ export class SSRRenderer {
    * Evaluate condition for x:if directive
    */
   private evaluateCondition(condition: string, context: SSRContext): boolean {
-    // Simple condition evaluation
-    // In a real implementation, this would be more sophisticated
     try {
-      // Replace context variables
-      let expr = condition;
-      for (const [key, value] of Object.entries(context.data)) {
-        expr = expr.replace(new RegExp(`\\b${key}\\b`, 'g'), JSON.stringify(value));
-      }
-      
-      // Evaluate the expression
-      return Boolean(eval(expr));
+      const expr = this.prepareExpression(condition, context);
+      return this.evaluateExpression(expr);
     } catch {
       return false;
     }
   }
 
   /**
+   * Prepare expression by cleaning and substituting variables
+   */
+  private prepareExpression(condition: string, context: SSRContext): string {
+    let expr = condition.trim();
+    if (expr.startsWith('{') && expr.endsWith('}')) {
+      expr = expr.slice(1, -1).trim();
+    }
+
+    // Replace context variables with their values
+    for (const [key, value] of Object.entries(context.data)) {
+      const regex = new RegExp(`\\b${key}\\b`, 'g');
+      expr = expr.replace(regex, JSON.stringify(value));
+    }
+
+    return expr;
+  }
+
+  /**
+   * Evaluate the prepared expression
+   */
+  private evaluateExpression(expr: string): boolean {
+    // Handle simple literals
+    const literalResult = this.evaluateLiteral(expr);
+    if (literalResult !== null) {
+      return literalResult;
+    }
+
+    // Handle complex expressions
+    const comparisonResult = this.evaluateComparison(expr);
+    if (comparisonResult !== null) {
+      return comparisonResult;
+    }
+
+    const logicalResult = this.evaluateLogical(expr);
+    if (logicalResult !== null) {
+      return logicalResult;
+    }
+
+    return false;
+  }
+
+  /**
+   * Evaluate literal values (booleans, numbers, strings, arrays, objects)
+   */
+  private evaluateLiteral(expr: string): boolean | null {
+    // Boolean literals
+    if (expr === 'true') return true;
+    if (expr === 'false') return false;
+    if (expr === 'null') return false;
+    if (expr === 'undefined') return false;
+
+    // Numeric values
+    const numValue = Number(expr);
+    if (!Number.isNaN(numValue)) {
+      return numValue !== 0;
+    }
+
+    // String values
+    if (this.isQuotedString(expr)) {
+      return expr.length > 2; // Non-empty string
+    }
+
+    // Array/object checks
+    return this.evaluateStructuredData(expr);
+  }
+
+  /**
+   * Check if expression is a quoted string
+   */
+  private isQuotedString(expr: string): boolean {
+    return (
+      (expr.startsWith('"') && expr.endsWith('"')) || (expr.startsWith("'") && expr.endsWith("'"))
+    );
+  }
+
+  /**
+   * Evaluate arrays and objects
+   */
+  private evaluateStructuredData(expr: string): boolean | null {
+    if (expr.startsWith('[') && expr.endsWith(']')) {
+      try {
+        const arr = JSON.parse(expr);
+        return Array.isArray(arr) && arr.length > 0;
+      } catch {
+        return false;
+      }
+    }
+
+    if (expr.startsWith('{') && expr.endsWith('}')) {
+      try {
+        const obj = JSON.parse(expr);
+        return obj !== null && Object.keys(obj).length > 0;
+      } catch {
+        return false;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Evaluate comparison expressions (==, !=, ===, !==, <, >, <=, >=)
+   */
+  private evaluateComparison(expr: string): boolean | null {
+    const operators = ['===', '!==', '==', '!=', '<=', '>=', '<', '>'];
+
+    for (const op of operators) {
+      const index = expr.indexOf(op);
+      if (index === -1) continue;
+
+      const left = expr.slice(0, index).trim();
+      const right = expr.slice(index + op.length).trim();
+
+      try {
+        const leftValue = this.parseValue(left);
+        const rightValue = this.parseValue(right);
+
+        switch (op) {
+          case '===':
+            return leftValue === rightValue;
+          case '!==':
+            return leftValue !== rightValue;
+          case '==':
+            return leftValue === rightValue;
+          case '!=':
+            return leftValue !== rightValue;
+          case '<':
+            return Number(leftValue) < Number(rightValue);
+          case '>':
+            return Number(leftValue) > Number(rightValue);
+          case '<=':
+            return Number(leftValue) <= Number(rightValue);
+          case '>=':
+            return Number(leftValue) >= Number(rightValue);
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Evaluate logical expressions (&&, ||)
+   */
+  private evaluateLogical(expr: string): boolean | null {
+    // Create minimal context for recursive evaluation
+    const minimalContext: SSRContext = {
+      url: '',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+    };
+
+    // Handle && operator
+    if (expr.includes('&&')) {
+      const parts = expr.split('&&').map((p) => p.trim());
+      if (parts.length === 2 && parts[0] && parts[1]) {
+        const left = this.evaluateCondition(parts[0], minimalContext);
+        if (!left) return false; // Short-circuit
+        return this.evaluateCondition(parts[1], minimalContext);
+      }
+    }
+
+    // Handle || operator
+    if (expr.includes('||')) {
+      const parts = expr.split('||').map((p) => p.trim());
+      if (parts.length === 2 && parts[0] && parts[1]) {
+        const left = this.evaluateCondition(parts[0], minimalContext);
+        if (left) return true; // Short-circuit
+        return this.evaluateCondition(parts[1], minimalContext);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Parse a value from string representation
+   */
+  private parseValue(value: string): unknown {
+    const trimmed = value.trim();
+
+    // Boolean literals
+    if (trimmed === 'true') return true;
+    if (trimmed === 'false') return false;
+    if (trimmed === 'null') return null;
+    if (trimmed === 'undefined') return undefined;
+
+    // Numbers
+    const num = Number(trimmed);
+    if (!Number.isNaN(num)) return num;
+
+    // Strings
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      return trimmed.slice(1, -1);
+    }
+
+    // Try to parse as JSON
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return trimmed; // Return as string if all else fails
+    }
+  }
+
+  /**
    * Create streaming response
    */
-  private createStream(writer: StreamingWriter, options: StreamingOptions): ReadableStream<Uint8Array> {
+  private createStream(
+    writer: StreamingWriter,
+    _options: StreamingOptions
+  ): ReadableStream<Uint8Array> {
     return new ReadableStream({
       start(controller) {
         writer.setController(controller);
       },
       cancel() {
         writer.close();
-      }
+      },
     });
   }
 }

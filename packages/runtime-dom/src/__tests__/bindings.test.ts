@@ -2,18 +2,18 @@
  * @fileoverview Tests for DOM bindings
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { signal, computed, effect, flushSync } from '@plank/runtime-core';
+import { computed, flushSync, signal } from '@plank/runtime-core';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
-  bindText,
   bindAttribute,
-  bindProperty,
-  bindClass,
-  bindStyle,
-  bindInputValue,
   bindCheckbox,
+  bindClass,
+  bindInputValue,
+  bindMultiple,
+  bindProperty,
+  bindStyle,
+  bindText,
   bindTwoWay,
-  bindMultiple
 } from '../bindings.js';
 
 describe('DOM Bindings', () => {
@@ -72,7 +72,7 @@ describe('DOM Bindings', () => {
       container.appendChild(div);
 
       const stop = bindText(div, count, {
-        formatter: (value) => `Count: ${value}`
+        formatter: (value) => `Count: ${value}`,
       });
 
       expect(div.textContent).toBe('Count: 42');
@@ -130,7 +130,7 @@ describe('DOM Bindings', () => {
       container.appendChild(div);
 
       const stop = bindAttribute(div, 'data-count', count, {
-        formatter: (value) => `count-${value}`
+        formatter: (value) => `count-${value}`,
       });
 
       expect(div.getAttribute('data-count')).toBe('count-42');
@@ -161,7 +161,7 @@ describe('DOM Bindings', () => {
       container.appendChild(input);
 
       const stop = bindProperty(input, 'value', count, {
-        formatter: (value) => `Count: ${value}`
+        formatter: (value) => `Count: ${value}`,
       });
 
       expect(input.value).toBe('Count: 42');
@@ -195,7 +195,7 @@ describe('DOM Bindings', () => {
       container.appendChild(div);
 
       const stop = bindClass(div, 'count', count, {
-        formatter: (value) => value > 3
+        formatter: (value) => value > 3,
       });
 
       expect(div.classList.contains('count')).toBe(true);
@@ -229,7 +229,7 @@ describe('DOM Bindings', () => {
       container.appendChild(div);
 
       const stop = bindStyle(div, 'width', count, {
-        formatter: (value) => `${value * 10}px`
+        formatter: (value) => `${value * 10}px`,
       });
 
       expect(div.style.width).toBe('50px');
@@ -332,7 +332,7 @@ describe('DOM Bindings', () => {
       container.appendChild(checkbox);
 
       const stop = bindCheckbox(checkbox, count, {
-        formatter: (value) => value > 3
+        formatter: (value) => value > 3,
       });
 
       expect(checkbox.checked).toBe(true);
@@ -371,7 +371,7 @@ describe('DOM Bindings', () => {
       const div = document.createElement('div');
       container.appendChild(div);
 
-      const stop = bindTwoWay(div, value, { attribute: 'data-value' } as any);
+      const stop = bindTwoWay(div, value, { attribute: 'data-value' });
 
       expect(div.getAttribute('data-value')).toBe('initial');
 
@@ -399,7 +399,7 @@ describe('DOM Bindings', () => {
       const effects = bindMultiple(div, [
         { signal: count, text: true },
         { signal: active, className: 'active' },
-        { signal: color, style: 'color' }
+        { signal: color, style: 'color' },
       ]);
 
       expect(div.textContent).toBe('42');
@@ -414,7 +414,9 @@ describe('DOM Bindings', () => {
       expect(div.classList.contains('active')).toBe(false);
       expect(div.style.color).toBe('blue');
 
-      effects.forEach(effect => effect.stop());
+      for (const effect of effects) {
+        effect.stop();
+      }
     });
   });
 });

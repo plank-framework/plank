@@ -106,7 +106,7 @@ export class StreamingResponse {
       },
       cancel: () => {
         this.close();
-      }
+      },
     });
   }
 
@@ -126,10 +126,7 @@ export class StreamingResponse {
    * Escape attribute value
    */
   private escapeAttribute(value: string): string {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 }
 
@@ -166,9 +163,7 @@ export class ProgressiveEnhancement {
    * Generate preconnect hints
    */
   static generatePreconnectHints(domains: string[]): string {
-    return domains
-      .map(domain => `<link rel="preconnect" href="${domain}">`)
-      .join('\n');
+    return domains.map((domain) => `<link rel="preconnect" href="${domain}">`).join('\n');
   }
 }
 
@@ -197,7 +192,7 @@ export class StreamingTemplates {
       viewport = 'width=device-width, initial-scale=1',
       styles = [],
       scripts = [],
-      preconnect = []
+      preconnect = [],
     } = options;
 
     return `<!DOCTYPE html>
@@ -205,13 +200,13 @@ export class StreamingTemplates {
 <head>
   <meta charset="${charset}">
   <meta name="viewport" content="${viewport}">
-  <title>${this.escapeHtml(title)}</title>
-  ${preconnect.map(domain => `<link rel="preconnect" href="${domain}">`).join('\n')}
-  ${styles.map(href => `<link rel="stylesheet" href="${href}">`).join('\n')}
+  <title>${StreamingTemplates.escapeHtml(title)}</title>
+  ${preconnect.map((domain) => `<link rel="preconnect" href="${domain}">`).join('\n')}
+  ${styles.map((href) => `<link rel="stylesheet" href="${href}">`).join('\n')}
 </head>
 <body>
   ${content}
-  ${scripts.map(src => `<script type="module" src="${src}"></script>`).join('\n')}
+  ${scripts.map((src) => `<script type="module" src="${src}"></script>`).join('\n')}
 </body>
 </html>`;
   }
@@ -238,10 +233,10 @@ export class StreamingTemplates {
         <div class="skeleton-line"></div>
         <div class="skeleton-line short"></div>
       </div>`,
-      image: `<div class="skeleton-image"></div>`
+      image: `<div class="skeleton-image"></div>`,
     };
 
-    return skeletons[type] + this.generateSkeletonStyles();
+    return skeletons[type] + StreamingTemplates.generateSkeletonStyles();
   }
 
   /**

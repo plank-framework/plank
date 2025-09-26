@@ -3,8 +3,16 @@
  * A simple, robust implementation
  */
 
-import { TemplateNode, DirectiveNode, IslandNode, ScriptNode } from './grammar.js';
-import { getDirectiveType, isValidIslandStrategy, ISLAND_STRATEGIES, isValidDirective } from './grammar.js';
+import {
+  type DirectiveNode,
+  getDirectiveType,
+  ISLAND_STRATEGIES,
+  type IslandNode,
+  isValidDirective,
+  isValidIslandStrategy,
+  type ScriptNode,
+  type TemplateNode,
+} from './grammar.js';
 
 export interface HTMLParseOptions {
   /** Enable development mode with additional debugging info */
@@ -26,7 +34,12 @@ export class WorkingHTMLParser {
   private source: string;
   private filename?: string | undefined;
   private dev: boolean;
-  private errors: Array<{ message: string; line: number; column: number; filename?: string | undefined }> = [];
+  private errors: Array<{
+    message: string;
+    line: number;
+    column: number;
+    filename?: string | undefined;
+  }> = [];
   private scripts: ScriptNode[] = [];
   private pos = 0;
   private line = 1;
@@ -53,14 +66,14 @@ export class WorkingHTMLParser {
       return {
         ast,
         scripts: this.scripts,
-        errors: this.errors
+        errors: this.errors,
       };
     } catch (error) {
       this.addError(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
       return {
         ast: { type: 'template', children: [] },
         scripts: [],
-        errors: this.errors
+        errors: this.errors,
       };
     }
   }
@@ -68,41 +81,48 @@ export class WorkingHTMLParser {
   private parseTemplate(): TemplateNode {
     const template: TemplateNode = {
       type: 'template',
-      children: []
+      children: [],
     };
 
     while (this.pos < this.source.length) {
       this.skipWhitespace();
-
       if (this.pos >= this.source.length) break;
 
-      if (this.source[this.pos] === '<') {
-        if (this.source.slice(this.pos, this.pos + 4) === '<!--') {
-          this.parseComment();
-        } else if (this.source.slice(this.pos, this.pos + 7) === '<script') {
-          const script = this.parseScript();
-          if (script) {
-            this.scripts.push(script);
-          }
-        } else if (this.source[this.pos + 1] === '/') {
-          // Skip closing tags at template level
-          this.skipToNext('>');
-          this.advance(); // Skip the '>'
-        } else {
-          const element = this.parseElement();
-          if (element) {
-            template.children!.push(element);
-          }
-        }
-      } else {
-        const text = this.parseText();
-        if (text) {
-          template.children!.push(text);
-        }
+      const node = this.parseTemplateNode();
+      if (node) {
+        template.children?.push(node);
       }
     }
 
     return template;
+  }
+
+  private parseTemplateNode(): TemplateNode | null {
+    if (this.source[this.pos] !== '<') {
+      return this.parseText();
+    }
+
+    if (this.source.slice(this.pos, this.pos + 4) === '<!--') {
+      this.parseComment();
+      return null;
+    }
+
+    if (this.source.slice(this.pos, this.pos + 7) === '<script') {
+      const script = this.parseScript();
+      if (script) {
+        this.scripts.push(script);
+      }
+      return null;
+    }
+
+    if (this.source[this.pos + 1] === '/') {
+      // Skip closing tags at template level
+      this.skipToNext('>');
+      this.advance(); // Skip the '>'
+      return null;
+    }
+
+    return this.parseElement();
   }
 
   private parseElement(): TemplateNode | null {
@@ -147,7 +167,9 @@ export class WorkingHTMLParser {
 
   private parseTagName(): string | null {
     const start = this.pos;
-    while (this.pos < this.source.length && /[a-zA-Z0-9-]/.test(this.source[this.pos]!)) {
+    while (this.pos < this.source.length) {
+      const char = this.source[this.pos];
+      if (!char || !/[a-zA-Z0-9-]/.test(char)) break;
       this.advance();
     }
 
@@ -182,7 +204,9 @@ export class WorkingHTMLParser {
 
   private parseAttributeName(): string | null {
     const start = this.pos;
-    while (this.pos < this.source.length && /[a-zA-Z0-9-:]/.test(this.source[this.pos]!)) {
+    while (this.pos < this.source.length) {
+      const char = this.source[this.pos];
+      if (!char || !/[a-zA-Z0-9-:]/.test(char)) break;
       this.advance();
     }
 
@@ -198,7 +222,9 @@ export class WorkingHTMLParser {
     } else {
       // Unquoted value
       const start = this.pos;
-      while (this.pos < this.source.length && !/[>\s]/.test(this.source[this.pos]!)) {
+      while (this.pos < this.source.length) {
+        const char = this.source[this.pos];
+        if (!char || /[>\s]/.test(char)) break;
         this.advance();
       }
       return this.source.slice(start, this.pos);
@@ -230,36 +256,49 @@ export class WorkingHTMLParser {
     while (this.pos < this.source.length) {
       this.skipWhitespace();
 
-      // Check for closing tag
-      if (this.source[this.pos] === '<' && this.source[this.pos + 1] === '/') {
-        const closingTag = `</${tagName}>`;
-        if (this.source.slice(this.pos, this.pos + closingTag.length) === closingTag) {
-          this.advance(closingTag.length);
-          break;
-        }
+      if (this.isClosingTag(tagName)) {
+        break;
       }
 
-      if (this.source.slice(this.pos, this.pos + 4) === '<!--') {
-        this.parseComment();
-      } else if (this.source.slice(this.pos, this.pos + 7) === '<script') {
-        const script = this.parseScript();
-        if (script) {
-          this.scripts.push(script);
-        }
-      } else if (this.source[this.pos] === '<') {
-        const element = this.parseElement();
-        if (element) {
-          children.push(element);
-        }
-      } else {
-        const text = this.parseText();
-        if (text) {
-          children.push(text);
-        }
+      const child = this.parseElementChild();
+      if (child) {
+        children.push(child);
       }
     }
 
     return children;
+  }
+
+  private isClosingTag(tagName: string): boolean {
+    if (this.source[this.pos] === '<' && this.source[this.pos + 1] === '/') {
+      const closingTag = `</${tagName}>`;
+      if (this.source.slice(this.pos, this.pos + closingTag.length) === closingTag) {
+        this.advance(closingTag.length);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private parseElementChild(): TemplateNode | null {
+    if (this.source.slice(this.pos, this.pos + 4) === '<!--') {
+      this.parseComment();
+      return null;
+    }
+
+    if (this.source.slice(this.pos, this.pos + 7) === '<script') {
+      const script = this.parseScript();
+      if (script) {
+        this.scripts.push(script);
+      }
+      return null;
+    }
+
+    if (this.source[this.pos] === '<') {
+      return this.parseElement();
+    }
+
+    return this.parseText();
   }
 
   private parseText(): TemplateNode | null {
@@ -276,7 +315,7 @@ export class WorkingHTMLParser {
 
     return {
       type: 'text',
-      text
+      text,
     };
   }
 
@@ -309,7 +348,10 @@ export class WorkingHTMLParser {
 
     // Parse script content
     const start = this.pos;
-    while (this.pos < this.source.length && this.source.slice(this.pos, this.pos + 9) !== '</script>') {
+    while (
+      this.pos < this.source.length &&
+      this.source.slice(this.pos, this.pos + 9) !== '</script>'
+    ) {
       this.advance();
     }
 
@@ -324,16 +366,20 @@ export class WorkingHTMLParser {
 
     return {
       type,
-      content: content.trim()
+      content: content.trim(),
     };
   }
 
-  private createElement(tagName: string, attributes: Record<string, string>, selfClosing: boolean): TemplateNode {
+  private createElement(
+    tagName: string,
+    attributes: Record<string, string>,
+    _selfClosing: boolean
+  ): TemplateNode {
     const element: TemplateNode = {
       type: 'element',
       tag: tagName,
       attributes,
-      children: []
+      children: [],
     };
 
     // Parse directives
@@ -362,7 +408,7 @@ export class WorkingHTMLParser {
     return {
       type,
       name,
-      value
+      value,
     };
   }
 
@@ -400,7 +446,9 @@ export class WorkingHTMLParser {
   }
 
   private skipWhitespace(): void {
-    while (this.pos < this.source.length && /\s/.test(this.source[this.pos]!)) {
+    while (this.pos < this.source.length) {
+      const char = this.source[this.pos];
+      if (!char || !/\s/.test(char)) break;
       this.advance();
     }
   }
@@ -413,8 +461,20 @@ export class WorkingHTMLParser {
 
   private isSelfClosingElement(tagName: string): boolean {
     const selfClosingTags = [
-      'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
-      'link', 'meta', 'param', 'source', 'track', 'wbr'
+      'area',
+      'base',
+      'br',
+      'col',
+      'embed',
+      'hr',
+      'img',
+      'input',
+      'link',
+      'meta',
+      'param',
+      'source',
+      'track',
+      'wbr',
     ];
     return selfClosingTags.includes(tagName.toLowerCase());
   }
@@ -424,7 +484,7 @@ export class WorkingHTMLParser {
       message,
       line: this.line,
       column: this.column,
-      filename: this.filename
+      filename: this.filename,
     });
   }
 }

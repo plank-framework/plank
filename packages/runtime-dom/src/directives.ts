@@ -2,20 +2,26 @@
  * @fileoverview Plank template directives implementation
  */
 
-import { Signal, Computed, Effect, effect } from '@plank/runtime-core';
-import { bindText, bindAttribute, bindProperty, bindClass, bindStyle, bindInputValue, bindCheckbox } from './bindings.js';
+import { type Computed, type Effect, effect, type Signal } from '@plank/runtime-core';
+import {
+  bindAttribute,
+  bindCheckbox,
+  bindClass,
+  bindInputValue,
+  bindProperty,
+  bindStyle,
+  bindText,
+} from './bindings.js';
 
-export interface DirectiveContext {
+export interface DirectiveContext<T = unknown> {
   element: Element;
   directive: string;
   expression: string;
-  signal?: Signal<any> | Computed<any>;
-  handler?: (...args: any[]) => void;
+  signal?: Signal<T> | Computed<T>;
+  handler?: (...args: unknown[]) => void;
 }
 
-export interface DirectiveHandler {
-  (context: DirectiveContext): Effect | void;
-}
+export type DirectiveHandler<T = unknown> = (context: DirectiveContext<T>) => Effect | void;
 
 /**
  * Registry of directive handlers
@@ -39,24 +45,24 @@ export function getDirectiveHandler(name: string): DirectiveHandler | undefined 
 /**
  * Execute a directive on an element
  */
-export function executeDirective(
+export function executeDirective<T = unknown>(
   element: Element,
   directive: string,
   expression: string,
-  context: any = {}
+  context: Partial<DirectiveContext<T>> = {}
 ): Effect | void {
-  const handler = getDirectiveHandler(directive);
+  const handler = getDirectiveHandler(directive) as DirectiveHandler<T> | undefined;
   if (!handler) {
     console.warn(`Unknown directive: ${directive}`);
     return;
   }
 
-  const directiveContext: DirectiveContext = {
+  const directiveContext: DirectiveContext<T> = {
     element,
     directive,
     expression,
-    ...context
-  };
+    ...context,
+  } as DirectiveContext<T>;
 
   return handler(directiveContext);
 }
@@ -64,7 +70,7 @@ export function executeDirective(
 /**
  * Event handler directive (on:click, on:submit, etc.)
  */
-function handleEventDirective(context: DirectiveContext): Effect | void {
+function handleEventDirective<T = unknown>(context: DirectiveContext<T>): Effect | void {
   const { element, directive, handler } = context;
 
   if (!handler) {
@@ -84,7 +90,7 @@ function handleEventDirective(context: DirectiveContext): Effect | void {
     stop: () => {
       element.removeEventListener(eventName, eventListener);
     },
-    isActive: true
+    isActive: true,
   } as Effect;
 
   return effectObj;
@@ -93,7 +99,7 @@ function handleEventDirective(context: DirectiveContext): Effect | void {
 /**
  * Binding directive (bind:value, bind:checked, etc.)
  */
-function handleBindDirective(context: DirectiveContext): Effect | void {
+function handleBindDirective<T = unknown>(context: DirectiveContext<T>): Effect | void {
   const { element, directive, signal } = context;
 
   if (!signal) {
@@ -105,9 +111,10 @@ function handleBindDirective(context: DirectiveContext): Effect | void {
 
   if (element instanceof HTMLInputElement) {
     if (property === 'value') {
-      return bindInputValue(element, signal as Signal<any>);
+      // Two-way value binding requires a Signal (not Computed)
+      return bindInputValue(element, signal as Signal<T>);
     } else if (property === 'checked') {
-      return bindCheckbox(element, signal as Signal<any>);
+      return bindCheckbox(element, signal as Signal<T>);
     } else {
       return bindProperty(element, property, signal);
     }
@@ -123,7 +130,25 @@ function handleBindDirective(context: DirectiveContext): Effect | void {
 /**
  * Conditional directive (x:if, x:show)
  */
-function handleConditionalDirective(context: DirectiveContext): Effect | void {
+function applyIf(element: Element, shouldShow: boolean): void {
+  if (shouldShow) {
+    if (!element.parentNode) {
+      // Element was removed, need to restore it
+      // This is complex and would need a reference to the original position
+      console.warn('x:if element restoration not fully implemented');
+    }
+  } else {
+    if (element.parentNode) {
+      element.remove();
+    }
+  }
+}
+
+function applyShow(element: Element, shouldShow: boolean): void {
+  (element as HTMLElement).style.display = shouldShow ? '' : 'none';
+}
+
+function handleConditionalDirective<T = unknown>(context: DirectiveContext<T>): Effect | void {
   const { element, directive, signal } = context;
 
   if (!signal) {
@@ -138,21 +163,9 @@ function handleConditionalDirective(context: DirectiveContext): Effect | void {
     const shouldShow = Boolean(value);
 
     if (type === 'if') {
-      // x:if - remove/add element from DOM
-      if (shouldShow) {
-        if (!element.parentNode) {
-          // Element was removed, need to restore it
-          // This is complex and would need a reference to the original position
-          console.warn('x:if element restoration not fully implemented');
-        }
-      } else {
-        if (element.parentNode) {
-          element.remove();
-        }
-      }
+      applyIf(element, shouldShow);
     } else if (type === 'show') {
-      // x:show - toggle visibility
-      (element as HTMLElement).style.display = shouldShow ? '' : 'none';
+      applyShow(element, shouldShow);
     }
   });
 }
@@ -160,7 +173,7 @@ function handleConditionalDirective(context: DirectiveContext): Effect | void {
 /**
  * Loop directive (x:for)
  */
-function handleForDirective(context: DirectiveContext): Effect | void {
+function handleForDirective<T = unknown>(context: DirectiveContext<T>): Effect | void {
   const { element, directive, signal } = context;
 
   if (!signal) {
@@ -171,7 +184,7 @@ function handleForDirective(context: DirectiveContext): Effect | void {
   // This is a simplified implementation
   // A full implementation would need to parse the expression and handle key tracking
   return effect(() => {
-    const items = signal();
+    const items = signal() as unknown;
 
     if (!Array.isArray(items)) {
       console.warn('x:for expects an array');
@@ -184,18 +197,18 @@ function handleForDirective(context: DirectiveContext): Effect | void {
     }
 
     // Create new children
-    items.forEach((item, index) => {
+    for (const item of items) {
       const child = element.cloneNode(true) as Element;
       child.textContent = String(item);
       element.appendChild(child);
-    });
+    }
   });
 }
 
 /**
  * Class directive (class:active, class:btn-primary)
  */
-function handleClassDirective(context: DirectiveContext): Effect | void {
+function handleClassDirective<T = unknown>(context: DirectiveContext<T>): Effect | void {
   const { element, directive, signal } = context;
 
   if (!signal) {
@@ -211,7 +224,7 @@ function handleClassDirective(context: DirectiveContext): Effect | void {
 /**
  * Attribute directive (attr:data-id, attr:aria-label)
  */
-function handleAttrDirective(context: DirectiveContext): Effect | void {
+function handleAttrDirective<T = unknown>(context: DirectiveContext<T>): Effect | void {
   const { element, directive, signal } = context;
 
   if (!signal) {
@@ -227,7 +240,7 @@ function handleAttrDirective(context: DirectiveContext): Effect | void {
 /**
  * Style directive (style:color, style:background-color)
  */
-function handleStyleDirective(context: DirectiveContext): Effect | void {
+function handleStyleDirective<T = unknown>(context: DirectiveContext<T>): Effect | void {
   const { element, directive, signal } = context;
 
   if (!signal) {
@@ -243,7 +256,7 @@ function handleStyleDirective(context: DirectiveContext): Effect | void {
 /**
  * Text interpolation directive
  */
-function handleTextDirective(context: DirectiveContext): Effect | void {
+function _handleTextDirective<T = unknown>(context: DirectiveContext<T>): Effect | void {
   const { element, signal } = context;
 
   if (!signal) {
@@ -308,23 +321,30 @@ registerDirective('style:opacity', handleStyleDirective);
  */
 export function processDirectives(
   element: Element,
-  directives: Record<string, any>,
-  context: any = {}
+  directives: Record<string, unknown>,
+  context: Partial<DirectiveContext<unknown>> = {}
 ): Effect[] {
   const effects: Effect[] = [];
 
   for (const [directive, value] of Object.entries(directives)) {
-    if (directive.startsWith('on:') ||
-        directive.startsWith('bind:') ||
-        directive.startsWith('x:') ||
-        directive.startsWith('class:') ||
-        directive.startsWith('attr:') ||
-        directive.startsWith('style:')) {
+    if (
+      directive.startsWith('on:') ||
+      directive.startsWith('bind:') ||
+      directive.startsWith('x:') ||
+      directive.startsWith('class:') ||
+      directive.startsWith('attr:') ||
+      directive.startsWith('style:')
+    ) {
+      const extra: Partial<DirectiveContext<unknown>> = {};
+      if (directive.startsWith('on:')) {
+        extra.handler = value as (...args: unknown[]) => void;
+      } else {
+        extra.signal = value as Signal<unknown> | Computed<unknown>;
+      }
 
       const effect = executeDirective(element, directive, String(value), {
         ...context,
-        signal: directive.startsWith('on:') ? undefined : value,
-        handler: directive.startsWith('on:') ? value : undefined
+        ...extra,
       });
 
       if (effect) {
@@ -340,9 +360,9 @@ export function processDirectives(
  * Clean up all effects
  */
 export function cleanupEffects(effects: Effect[]): void {
-  effects.forEach(effect => {
-    if (effect && typeof effect.stop === 'function') {
-      effect.stop();
+  for (const effectObj of effects) {
+    if (effectObj && typeof effectObj.stop === 'function') {
+      effectObj.stop();
     }
-  });
+  }
 }

@@ -36,14 +36,11 @@ export interface CompileResult {
 /**
  * Compile a Plank template (.plk) to JavaScript
  */
-export function compile(
-  source: string,
-  options: CompilerOptions = {}
-): CompileResult {
+export function compile(source: string, options: CompilerOptions = {}): CompileResult {
   // Parse the template first
   const parseResult = parse(source, {
     dev: options.dev,
-    filename: options.filename
+    filename: options.filename,
   });
 
   // TODO: Implement code generation from AST
@@ -55,31 +52,30 @@ export function compile(
     dependencies: parseResult.dependencies,
     islands: parseResult.islands,
     actions: parseResult.actions,
-    errors: parseResult.errors
+    errors: parseResult.errors,
   };
 }
-
-// Re-export parser functionality
-export { parse, validate } from './parser.js';
-export type {
-  TemplateNode,
-  DirectiveNode,
-  IslandNode,
-  ScriptNode,
-  ExpressionNode,
-  ForLoopNode,
-  ParseResult,
-  ParseError
-} from './parser.js';
 
 // Re-export grammar definitions
 export {
   DIRECTIVE_PATTERNS,
-  ISLAND_STRATEGIES,
   EXPRESSION_OPERATORS,
-  RESERVED_KEYWORDS,
-  isValidDirective,
   getDirectiveType,
+  ISLAND_STRATEGIES,
+  isValidDirective,
+  isValidExpression,
   isValidIslandStrategy,
-  isValidExpression
+  RESERVED_KEYWORDS,
 } from './grammar.js';
+export type {
+  DirectiveNode,
+  ExpressionNode,
+  ForLoopNode,
+  IslandNode,
+  ParseError,
+  ParseResult,
+  ScriptNode,
+  TemplateNode,
+} from './parser.js';
+// Re-export parser functionality
+export { parse, validate } from './parser.js';

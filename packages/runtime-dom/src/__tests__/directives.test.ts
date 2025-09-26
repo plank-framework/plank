@@ -2,14 +2,14 @@
  * @fileoverview Tests for Plank directives
  */
 
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { signal, computed, effect, flushSync } from '@plank/runtime-core';
+import { flushSync, signal } from '@plank/runtime-core';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import {
-  registerDirective,
-  getDirectiveHandler,
+  cleanupEffects,
   executeDirective,
+  getDirectiveHandler,
   processDirectives,
-  cleanupEffects
+  registerDirective,
 } from '../directives.js';
 
 describe('Plank Directives', () => {
@@ -250,7 +250,7 @@ describe('Plank Directives', () => {
       const effects = processDirectives(div, {
         'bind:value': count,
         'class:active': active,
-        'on:click': handler
+        'on:click': handler,
       });
 
       expect(effects).toHaveLength(3);
@@ -275,8 +275,8 @@ describe('Plank Directives', () => {
 
       const effects = processDirectives(div, {
         'bind:value': count,
-        'id': 'test-id',
-        'class': 'test-class'
+        id: 'test-id',
+        class: 'test-class',
       });
 
       expect(effects).toHaveLength(1);
@@ -293,7 +293,7 @@ describe('Plank Directives', () => {
 
       const effects = processDirectives(div, {
         'bind:value': count,
-        'class:active': count
+        'class:active': count,
       });
 
       expect(effects).toHaveLength(2);
@@ -301,9 +301,9 @@ describe('Plank Directives', () => {
       cleanupEffects(effects);
 
       // Effects should be stopped (check if stop method exists and was called)
-      effects.forEach(effect => {
+      for (const effect of effects) {
         expect(typeof effect.stop).toBe('function');
-      });
+      }
     });
   });
 });

@@ -3,19 +3,22 @@
  * Fine-grained reactivity with dependency tracking and microtask scheduling
  */
 
+// Base types for reactive values
+type ReactiveValue = Signal<unknown> | Computed<unknown> | Effect;
+
 export interface Signal<T> {
   (): T;
   (value: T): void;
   readonly value: T;
-  readonly dependencies: Set<Computed<any>>;
-  readonly dependents: Set<Computed<any> | Effect>;
+  readonly dependencies: Set<Computed<unknown>>;
+  readonly dependents: Set<ReactiveValue>;
 }
 
 export interface Computed<T> {
   (): T;
   readonly value: T;
-  readonly dependencies: Set<Signal<any> | Computed<any>>;
-  readonly dependents: Set<Computed<any> | Effect>;
+  readonly dependencies: Set<ReactiveValue>;
+  readonly dependents: Set<ReactiveValue>;
   readonly isDirty: boolean;
 }
 
@@ -23,21 +26,21 @@ export interface Effect {
   (): void | (() => void);
   stop(): void;
   readonly isActive: boolean;
-  readonly dependencies: Set<Signal<any>>;
+  readonly dependencies: Set<Signal<unknown>>;
 }
 
 // Global scheduler for batched updates
 class Scheduler {
   private scheduled = false;
   private effects: Set<Effect> = new Set();
-  private computeds: Set<Computed<any>> = new Set();
+  private computeds: Set<Computed<unknown>> = new Set();
 
   schedule(effect: Effect): void {
     this.effects.add(effect);
     this.flush();
   }
 
-  scheduleComputed(computed: Computed<any>): void {
+  scheduleComputed(computed: Computed<unknown>): void {
     this.computeds.add(computed);
     this.flush();
   }
@@ -90,13 +93,15 @@ class Scheduler {
     this.effects.clear();
   }
 
-  private updateComputed(computed: Computed<any>): void {
+  private updateComputed(computed: Computed<unknown>): void {
     // Store dependents before clearing them
-    const dependents = new Set((computed as any).dependents);
+    const dependents = new Set(computed.dependents);
 
     // Clear old dependencies
     for (const dep of computed.dependencies) {
-      dep.dependents.delete(computed);
+      if ('dependents' in dep) {
+        dep.dependents.delete(computed);
+      }
     }
     computed.dependencies.clear();
 
@@ -108,9 +113,12 @@ class Scheduler {
     activeEffect = null;
 
     try {
-      (computed as any).value = computed();
+      // Access the value setter through the computed function
+      const computedWithSetter = computed as Computed<unknown> & { value: unknown };
+      computedWithSetter.value = computed();
       // Mark as clean after successful recomputation
-      (computed as any).isDirty = false;
+      const computedWithDirty = computed as Computed<unknown> & { isDirty: boolean };
+      computedWithDirty.isDirty = false;
     } finally {
       activeComputed = prevActiveComputed;
       activeEffect = prevActiveEffect;
@@ -118,9 +126,10 @@ class Scheduler {
 
     // Notify dependents that this computed has been updated
     for (const dependent of dependents) {
-      if ('isDirty' in (dependent as any)) {
-        (dependent as any).isDirty = true;
-        this.scheduleComputed(dependent as Computed<any>);
+      if ('isDirty' in dependent) {
+        const dependentWithDirty = dependent as Computed<unknown> & { isDirty: boolean };
+        dependentWithDirty.isDirty = true;
+        this.scheduleComputed(dependent as Computed<unknown>);
       } else {
         this.schedule(dependent as Effect);
       }
@@ -132,26 +141,27 @@ class Scheduler {
 const scheduler = new Scheduler();
 
 // Global tracking for active computations
-let activeComputed: Computed<any> | null = null;
+let activeComputed: Computed<unknown> | null = null;
 let activeEffect: Effect | null = null;
 
 /**
  * Mark a computed as dirty and notify its dependents
  */
-function markComputedDirty(computed: Computed<any>): void {
+function markComputedDirty(computed: Computed<unknown>): void {
   // If already dirty, don't process again (avoid infinite loops)
-  if ((computed as any).isDirty) return;
+  if (computed.isDirty) return;
 
   // Mark as dirty and schedule
-  (computed as any).isDirty = true;
+  const computedWithDirty = computed as Computed<unknown> & { isDirty: boolean };
+  computedWithDirty.isDirty = true;
   scheduler.scheduleComputed(computed);
 
   // Notify all dependents of this computed
-  const computedDependents = (computed as any).dependents as Set<Computed<any> | Effect>;
+  const computedDependents = computed.dependents;
   for (const dependent of computedDependents) {
     if ('isDirty' in dependent) {
       // It's a computed - recursively mark as dirty
-      markComputedDirty(dependent as Computed<any>);
+      markComputedDirty(dependent as Computed<unknown>);
     } else {
       // It's an effect - schedule it
       scheduler.schedule(dependent as Effect);
@@ -163,8 +173,8 @@ function markComputedDirty(computed: Computed<any>): void {
  * Create a reactive signal
  */
 export function signal<T>(initialValue: T): Signal<T> {
-  const dependencies = new Set<Computed<any>>();
-  const dependents = new Set<Computed<any> | Effect>();
+  const dependencies = new Set<Computed<unknown>>();
+  const dependents = new Set<ReactiveValue>();
   let value = initialValue;
 
   const signalFn = (newValue?: T) => {
@@ -177,7 +187,7 @@ export function signal<T>(initialValue: T): Signal<T> {
       for (const dependent of dependents) {
         if ('isDirty' in dependent) {
           // It's a computed - mark as dirty and schedule
-          markComputedDirty(dependent as Computed<any>);
+          markComputedDirty(dependent as Computed<unknown>);
         } else {
           // It's an effect
           scheduler.schedule(dependent as Effect);
@@ -188,12 +198,12 @@ export function signal<T>(initialValue: T): Signal<T> {
     // Track dependency if we're in a computation or effect
     if (activeComputed) {
       dependents.add(activeComputed);
-      activeComputed.dependencies.add(signalFn as Signal<any>);
+      activeComputed.dependencies.add(signalFn as Signal<unknown>);
     }
     if (activeEffect) {
       dependents.add(activeEffect);
       // Add this signal to the effect's dependencies
-      activeEffect.dependencies.add(signalFn as Signal<any>);
+      activeEffect.dependencies.add(signalFn as Signal<unknown>);
     }
 
     return value;
@@ -203,16 +213,16 @@ export function signal<T>(initialValue: T): Signal<T> {
   Object.defineProperties(signalFn, {
     value: {
       get: () => value,
-      configurable: true
+      configurable: true,
     },
     dependencies: {
       get: () => dependencies,
-      configurable: true
+      configurable: true,
     },
     dependents: {
       get: () => dependents,
-      configurable: true
-    }
+      configurable: true,
+    },
   });
 
   return signalFn as Signal<T>;
@@ -222,34 +232,51 @@ export function signal<T>(initialValue: T): Signal<T> {
  * Create a computed value that depends on signals
  */
 export function computed<T>(fn: () => T): Computed<T> {
-  const dependencies = new Set<Signal<any> | Computed<any>>();
-  const dependents = new Set<Computed<any> | Effect>();
+  const dependencies = new Set<ReactiveValue>();
+  const dependents = new Set<ReactiveValue>();
   let value: T;
   let isDirty = true;
 
-  const computedFn = () => {
-    // Track dependency if we're in a computation or effect
+  const trackDependencies = () => {
     if (activeComputed) {
       dependents.add(activeComputed);
-      activeComputed.dependencies.add(computedFn as Computed<any>);
+      activeComputed.dependencies.add(computedFn as Computed<unknown>);
     }
     if (activeEffect) {
       dependents.add(activeEffect);
     }
+  };
+
+  const clearOldDependencies = () => {
+    for (const dep of dependencies) {
+      if ('dependents' in dep) {
+        dep.dependents.delete(computedFn as Computed<unknown>);
+      }
+    }
+    dependencies.clear();
+  };
+
+  const notifyDependents = (currentDependents: Set<ReactiveValue>) => {
+    for (const dependent of currentDependents) {
+      if ('isDirty' in dependent) {
+        const dependentWithDirty = dependent as Computed<unknown> & { isDirty: boolean };
+        dependentWithDirty.isDirty = true;
+        scheduler.scheduleComputed(dependent as Computed<unknown>);
+      } else {
+        scheduler.schedule(dependent as Effect);
+      }
+    }
+  };
+
+  const computedFn = () => {
+    trackDependencies();
 
     if (isDirty || value === undefined) {
-      // Store dependents before clearing dependencies
       const currentDependents = new Set(dependents);
+      clearOldDependencies();
 
-      // Clear old dependencies
-      for (const dep of dependencies) {
-        dep.dependents.delete(computedFn as Computed<any>);
-      }
-      dependencies.clear();
-
-      // Recompute with dependency tracking
       const prevActiveComputed = activeComputed;
-      activeComputed = computedFn as Computed<any>;
+      activeComputed = computedFn as Computed<unknown>;
 
       try {
         value = fn();
@@ -258,16 +285,7 @@ export function computed<T>(fn: () => T): Computed<T> {
         activeComputed = prevActiveComputed;
       }
 
-      // Notify dependents that this computed has been updated
-      for (const dependent of currentDependents) {
-        if ('isDirty' in dependent) {
-          (dependent as any).isDirty = true;
-          scheduler.scheduleComputed(dependent as Computed<any>);
-        } else {
-          // It's an effect - schedule it for re-execution
-          scheduler.schedule(dependent as Effect);
-        }
-      }
+      notifyDependents(currentDependents);
     }
 
     return value;
@@ -282,22 +300,26 @@ export function computed<T>(fn: () => T): Computed<T> {
         }
         return value;
       },
-      set: (val: T) => { value = val; },
-      configurable: true
+      set: (val: T) => {
+        value = val;
+      },
+      configurable: true,
     },
     dependencies: {
       get: () => dependencies,
-      configurable: true
+      configurable: true,
     },
     dependents: {
       get: () => dependents,
-      configurable: true
+      configurable: true,
     },
     isDirty: {
       get: () => isDirty,
-      set: (val: boolean) => { isDirty = val; },
-      configurable: true
-    }
+      set: (val: boolean) => {
+        isDirty = val;
+      },
+      configurable: true,
+    },
   });
 
   // Initial computation
@@ -310,7 +332,7 @@ export function computed<T>(fn: () => T): Computed<T> {
  * Create a side effect that runs when dependencies change
  */
 export function effect(fn: () => void | (() => void)): Effect {
-  const dependencies = new Set<Signal<any>>();
+  const dependencies = new Set<Signal<unknown>>();
   let cleanup: (() => void) | undefined;
   let isActive = true;
 
@@ -344,19 +366,20 @@ export function effect(fn: () => void | (() => void)): Effect {
   Object.defineProperties(effectFn, {
     isActive: {
       get: () => isActive,
-      configurable: true
+      configurable: true,
     },
     dependencies: {
       get: () => dependencies,
-      configurable: true
-    }
+      configurable: true,
+    },
   });
 
   // Initial run
   effectFn();
 
   // Add stop method
-  (effectFn as any).stop = () => {
+  const effectWithStop = effectFn as Effect & { stop: () => void };
+  effectWithStop.stop = () => {
     if (!isActive) return;
 
     isActive = false;
@@ -396,7 +419,7 @@ export function derived<T>(fn: () => T): Computed<T> {
 /**
  * Create a signal that only updates when the value actually changes
  */
-export function memo<T>(fn: () => T, deps?: Signal<any>[]): Computed<T> {
+export function memo<T, TDep = unknown>(fn: () => T, deps?: Signal<TDep>[]): Computed<T> {
   if (deps) {
     // Create a computed that depends on specific signals
     return computed(() => {
@@ -417,35 +440,36 @@ export function memo<T>(fn: () => T, deps?: Signal<any>[]): Computed<T> {
 export function fromPromise<T>(promise: Promise<T>): Signal<T | undefined> {
   const sig = signal<T | undefined>(undefined);
 
-  promise.then(value => {
-    sig(value);
-  }).catch(error => {
-    // Could emit error signal here
-    console.error('Promise signal error:', error);
-  });
+  promise
+    .then((value) => {
+      sig(value);
+    })
+    .catch((error) => {
+      // Could emit error signal here
+      console.error('Promise signal error:', error);
+    });
 
   return sig;
 }
 
-
 /**
  * Utility to check if a value is a signal
  */
-export function isSignal(value: any): value is Signal<any> {
+export function isSignal(value: unknown): value is Signal<unknown> {
   return typeof value === 'function' && 'dependencies' in value && 'dependents' in value;
 }
 
 /**
  * Utility to check if a value is a computed
  */
-export function isComputed(value: any): value is Computed<any> {
+export function isComputed(value: unknown): value is Computed<unknown> {
   return typeof value === 'function' && 'dependencies' in value && 'isDirty' in value;
 }
 
 /**
  * Utility to check if a value is an effect
  */
-export function isEffect(value: any): value is Effect {
+export function isEffect(value: unknown): value is Effect {
   return typeof value === 'function' && 'isActive' in value && 'stop' in value;
 }
 

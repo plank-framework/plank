@@ -2,8 +2,6 @@
  * @fileoverview Types for server-side rendering
  */
 
-import type { TemplateNode, ParseResult } from '@plank/compiler';
-
 /**
  * Server-side rendering context
  */

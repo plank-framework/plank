@@ -53,7 +53,7 @@ program
   .command('analyze')
   .description('Analyze bundle size and performance budgets')
   .option('--fail-on-budget-exceeded', 'Fail if budgets are exceeded')
-  .action((options) => {
+  .action((_options) => {
     console.log('Analyzing bundle size and performance budgets...');
     // TODO: Implement budget analysis
     // This is a placeholder for Phase B implementation

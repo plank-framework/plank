@@ -2,19 +2,19 @@
  * @fileoverview Tests for Plank signals implementation
  */
 
-import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import {
-  signal,
-  computed,
-  effect,
   batch,
+  computed,
   derived,
-  memo,
-  fromPromise,
+  effect,
   flushSync,
-  isSignal,
+  fromPromise,
   isComputed,
-  isEffect
+  isEffect,
+  isSignal,
+  memo,
+  signal,
 } from '../signals.js';
 
 describe('Plank Signals', () => {
@@ -132,7 +132,7 @@ describe('Plank Signals', () => {
       count(10);
 
       // Effects are batched, so we need to wait for microtask
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           expect(log).toEqual([0, 10]);
           resolve(undefined);
@@ -151,7 +151,7 @@ describe('Plank Signals', () => {
 
       count(5);
 
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           expect(cleanup).toHaveBeenCalled();
           resolve(undefined);
@@ -173,7 +173,7 @@ describe('Plank Signals', () => {
       count(10);
       flushSync();
 
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           expect(log).toEqual([0, 5]);
           resolve(undefined);
@@ -208,7 +208,7 @@ describe('Plank Signals', () => {
         b(2);
       });
 
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           expect(log).toEqual([0, 3]);
           resolve(undefined);
@@ -276,7 +276,6 @@ describe('Plank Signals', () => {
       expect(sig()).toBeUndefined();
     });
   });
-
 
   describe('type guards', () => {
     test('should identify signals', () => {

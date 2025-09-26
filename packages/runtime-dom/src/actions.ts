@@ -2,13 +2,20 @@
  * @fileoverview Server actions system for form handling
  */
 
-import { Signal, Computed, Effect, signal, computed, effect } from '@plank/runtime-core';
+import {
+  type Computed,
+  computed,
+  type Effect,
+  effect,
+  type Signal,
+  signal,
+} from '@plank/runtime-core';
 
 export interface ActionOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
   timeout?: number;
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: unknown) => void;
   onError?: (error: Error) => void;
   onProgress?: (progress: number) => void;
 }
@@ -16,11 +23,11 @@ export interface ActionOptions {
 export interface ActionState {
   loading: boolean;
   error: Error | null;
-  data: any;
+  data: unknown;
   progress: number;
 }
 
-export interface ActionResult<T = any> {
+export interface ActionResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -31,57 +38,97 @@ export interface ActionResult<T = any> {
 /**
  * Create a server action
  */
-export function createAction<T = any>(
+export function createAction<T = unknown>(
   url: string,
   options: ActionOptions = {}
 ): {
-  execute: (data?: any) => Promise<ActionResult<T>>;
+  execute: (data?: unknown) => Promise<ActionResult<T>>;
   state: Signal<ActionState>;
   loading: Computed<boolean>;
   error: Computed<Error | null>;
   data: Computed<T | null>;
 } {
-  const {
-    method = 'POST',
-    headers = {},
-    timeout = 30000,
-    onSuccess,
-    onError,
-    onProgress
-  } = options;
+  const { method = 'POST', headers = {}, timeout = 30000, onSuccess, onError } = options;
 
   const state = signal<ActionState>({
     loading: false,
     error: null,
     data: null,
-    progress: 0
+    progress: 0,
   });
 
   const loading = computed(() => state().loading);
   const error = computed(() => state().error);
-  const data = computed(() => state().data);
+  const data = computed(() => state().data as T | null);
 
-  const execute = async (formData?: any): Promise<ActionResult<T>> => {
+  const buildRequestHeaders = (): Record<string, string> => {
+    const requestHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...headers,
+    };
+
+    // Add CSRF token if available
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+      requestHeaders['X-CSRF-Token'] = csrfToken;
+    }
+
+    return requestHeaders;
+  };
+
+  const handleSuccess = (result: ActionResult<T>): void => {
+    // Update state
+    state({
+      loading: false,
+      error: null,
+      data: result.data,
+      progress: 100,
+    });
+
+    // Call success callback
+    if (onSuccess && result.success) {
+      onSuccess(result.data);
+    }
+
+    // Handle redirect
+    if (result.redirect) {
+      window.location.href = result.redirect;
+    }
+  };
+
+  const handleError = (err: unknown): ActionResult<T> => {
+    const error = err instanceof Error ? err : new Error(String(err));
+
+    // Update state
+    state({
+      loading: false,
+      error,
+      data: state().data,
+      progress: 0,
+    });
+
+    // Call error callback
+    if (onError) {
+      onError(error);
+    }
+
+    return {
+      success: false,
+      error: error.message,
+    };
+  };
+
+  const execute = async (formData?: unknown): Promise<ActionResult<T>> => {
     // Set loading state
     state({
       loading: true,
       error: null,
       data: state().data,
-      progress: 0
+      progress: 0,
     });
 
     try {
-      const requestHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...headers
-      };
-
-      // Add CSRF token if available
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      if (csrfToken) {
-        requestHeaders['X-CSRF-Token'] = csrfToken;
-      }
-
+      const requestHeaders = buildRequestHeaders();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -89,7 +136,7 @@ export function createAction<T = any>(
         method,
         headers: requestHeaders,
         body: formData ? JSON.stringify(formData) : null,
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -99,47 +146,10 @@ export function createAction<T = any>(
       }
 
       const result: ActionResult<T> = await response.json();
-
-      // Update state
-      state({
-        loading: false,
-        error: null,
-        data: result.data,
-        progress: 100
-      });
-
-      // Call success callback
-      if (onSuccess && result.success) {
-        onSuccess(result.data);
-      }
-
-      // Handle redirect
-      if (result.redirect) {
-        window.location.href = result.redirect;
-      }
-
+      handleSuccess(result);
       return result;
-
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-
-      // Update state
-      state({
-        loading: false,
-        error,
-        data: state().data,
-        progress: 0
-      });
-
-      // Call error callback
-      if (onError) {
-        onError(error);
-      }
-
-      return {
-        success: false,
-        error: error.message
-      };
+      return handleError(err);
     }
   };
 
@@ -148,14 +158,14 @@ export function createAction<T = any>(
     state,
     loading,
     error,
-    data
+    data,
   };
 }
 
 /**
  * Create a form action that handles form submission
  */
-export function createFormAction<T = any>(
+export function createFormAction<T = unknown>(
   url: string,
   options: ActionOptions = {}
 ): {
@@ -174,7 +184,7 @@ export function createFormAction<T = any>(
     const formData = new FormData(form);
 
     // Convert FormData to object
-    const data: Record<string, any> = {};
+    const data: Record<string, unknown> = {};
     for (const [key, value] of formData.entries()) {
       data[key] = value;
     }
@@ -187,21 +197,24 @@ export function createFormAction<T = any>(
     state: action.state,
     loading: action.loading,
     error: action.error,
-    data: action.data
+    data: action.data,
   };
 }
 
 /**
  * Create an optimistic action that updates UI immediately
  */
-export function createOptimisticAction<T = any>(
+export function createOptimisticAction<T = unknown>(
   url: string,
   options: ActionOptions & {
-    optimisticUpdate: (data: any) => void;
+    optimisticUpdate: (data: unknown) => void;
     rollbackUpdate: () => void;
-  } = {} as any
+  } = {} as ActionOptions & {
+    optimisticUpdate: (data: unknown) => void;
+    rollbackUpdate: () => void;
+  }
 ): {
-  execute: (data?: any) => Promise<ActionResult<T>>;
+  execute: (data?: unknown) => Promise<ActionResult<T>>;
   state: Signal<ActionState>;
   loading: Computed<boolean>;
   error: Computed<Error | null>;
@@ -211,7 +224,7 @@ export function createOptimisticAction<T = any>(
 
   const action = createAction<T>(url, actionOptions);
 
-  const execute = async (data?: any): Promise<ActionResult<T>> => {
+  const execute = async (data?: unknown): Promise<ActionResult<T>> => {
     // Apply optimistic update
     if (optimisticUpdate) {
       optimisticUpdate(data);
@@ -240,18 +253,18 @@ export function createOptimisticAction<T = any>(
     state: action.state,
     loading: action.loading,
     error: action.error,
-    data: action.data
+    data: action.data,
   };
 }
 
 /**
  * Create a mutation action for data updates
  */
-export function createMutationAction<T = any>(
+export function createMutationAction<T = unknown>(
   url: string,
   options: ActionOptions = {}
 ): {
-  mutate: (data: any) => Promise<ActionResult<T>>;
+  mutate: (data: unknown) => Promise<ActionResult<T>>;
   state: Signal<ActionState>;
   loading: Computed<boolean>;
   error: Computed<Error | null>;
@@ -264,14 +277,14 @@ export function createMutationAction<T = any>(
     state: action.state,
     loading: action.loading,
     error: action.error,
-    data: action.data
+    data: action.data,
   };
 }
 
 /**
  * Create a query action for data fetching
  */
-export function createQueryAction<T = any>(
+export function createQueryAction<T = unknown>(
   url: string,
   options: ActionOptions = {}
 ): {
@@ -288,7 +301,7 @@ export function createQueryAction<T = any>(
     state: action.state,
     loading: action.loading,
     error: action.error,
-    data: action.data
+    data: action.data,
   };
 }
 
@@ -320,7 +333,7 @@ export function bindActionToForm(
     stop: () => {
       form.removeEventListener('submit', action.handleSubmit);
     },
-    isActive: true
+    isActive: true,
   } as Effect;
 }
 
@@ -330,11 +343,11 @@ export function bindActionToForm(
 export function bindActionToButton(
   button: HTMLButtonElement,
   action: {
-    execute: (data?: any) => Promise<any>;
+    execute: (data?: unknown) => Promise<unknown>;
     loading: Computed<boolean>;
     error: Computed<Error | null>;
   },
-  data?: any
+  data?: unknown
 ): Effect {
   const handleClick = async () => {
     await action.execute(data);
@@ -352,12 +365,12 @@ export function bindActionToButton(
 /**
  * Create a debounced action that delays execution
  */
-export function createDebouncedAction<T = any>(
+export function createDebouncedAction<T = unknown>(
   url: string,
   delay: number = 300,
   options: ActionOptions = {}
 ): {
-  execute: (data?: any) => Promise<ActionResult<T>>;
+  execute: (data?: unknown) => Promise<ActionResult<T>>;
   state: Signal<ActionState>;
   loading: Computed<boolean>;
   error: Computed<Error | null>;
@@ -366,7 +379,7 @@ export function createDebouncedAction<T = any>(
   const action = createAction<T>(url, options);
   let timeoutId: number | undefined;
 
-  const execute = async (data?: any): Promise<ActionResult<T>> => {
+  const execute = async (data?: unknown): Promise<ActionResult<T>> => {
     return new Promise((resolve, reject) => {
       if (timeoutId) {
         clearTimeout(timeoutId);
@@ -388,19 +401,19 @@ export function createDebouncedAction<T = any>(
     state: action.state,
     loading: action.loading,
     error: action.error,
-    data: action.data
+    data: action.data,
   };
 }
 
 /**
  * Create a throttled action that limits execution frequency
  */
-export function createThrottledAction<T = any>(
+export function createThrottledAction<T = unknown>(
   url: string,
   limit: number = 1000,
   options: ActionOptions = {}
 ): {
-  execute: (data?: any) => Promise<ActionResult<T>>;
+  execute: (data?: unknown) => Promise<ActionResult<T>>;
   state: Signal<ActionState>;
   loading: Computed<boolean>;
   error: Computed<Error | null>;
@@ -409,14 +422,14 @@ export function createThrottledAction<T = any>(
   const action = createAction<T>(url, options);
   let lastExecution = 0;
 
-  const execute = async (data?: any): Promise<ActionResult<T>> => {
+  const execute = async (data?: unknown): Promise<ActionResult<T>> => {
     const now = Date.now();
 
     if (now - lastExecution < limit) {
       // Throttled - return last result
       return {
         success: true,
-        data: action.data() as T
+        data: action.data() as T,
       };
     }
 
@@ -429,6 +442,6 @@ export function createThrottledAction<T = any>(
     state: action.state,
     loading: action.loading,
     error: action.error,
-    data: action.data
+    data: action.data,
   };
 }

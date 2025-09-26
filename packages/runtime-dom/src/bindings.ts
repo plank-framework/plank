@@ -2,38 +2,38 @@
  * @fileoverview DOM bindings for reactive updates
  */
 
-import { Signal, Computed, Effect, effect } from '@plank/runtime-core';
+import { type Computed, type Effect, effect, type Signal } from '@plank/runtime-core';
 
 export interface BindingContext {
   element: Element;
-  signal: Signal<any> | Computed<any>;
+  signal: Signal<unknown> | Computed<unknown>;
   attribute?: string;
   property?: string;
   event?: string;
-  handler?: (value: any) => void;
+  handler?: (value: unknown) => void;
 }
 
-export interface BindingOptions {
+export interface BindingOptions<T = unknown> {
   /** Whether to use textContent instead of innerHTML */
   text?: boolean;
   /** Whether to use setAttribute instead of property assignment */
   attribute?: boolean;
   /** Custom formatter for the value */
-  formatter?: (value: any) => string;
+  formatter?: (value: T) => string;
 }
 
-export interface BooleanBindingOptions {
+export interface BooleanBindingOptions<T = unknown> {
   /** Custom formatter for the value */
-  formatter?: (value: any) => boolean;
+  formatter?: (value: T) => boolean;
 }
 
 /**
  * Bind a signal to an element's text content
  */
-export function bindText(
+export function bindText<T = unknown>(
   element: Element,
-  signal: Signal<any> | Computed<any>,
-  options: BindingOptions = {}
+  signal: Signal<T> | Computed<T>,
+  options: BindingOptions<T> = {}
 ): Effect {
   const { text = true, formatter } = options;
 
@@ -52,11 +52,11 @@ export function bindText(
 /**
  * Bind a signal to an element's attribute
  */
-export function bindAttribute(
+export function bindAttribute<T = unknown>(
   element: Element,
   attribute: string,
-  signal: Signal<any> | Computed<any>,
-  options: BindingOptions = {}
+  signal: Signal<T> | Computed<T>,
+  options: BindingOptions<T> = {}
 ): Effect {
   const { formatter } = options;
 
@@ -75,11 +75,11 @@ export function bindAttribute(
 /**
  * Bind a signal to an element's property
  */
-export function bindProperty(
+export function bindProperty<T = unknown>(
   element: Element,
   property: string,
-  signal: Signal<any> | Computed<any>,
-  options: BindingOptions = {}
+  signal: Signal<T> | Computed<T>,
+  options: BindingOptions<T> = {}
 ): Effect {
   const { formatter } = options;
 
@@ -87,18 +87,23 @@ export function bindProperty(
     const value = signal();
     const displayValue = formatter ? formatter(value) : value;
 
-    (element as any)[property] = displayValue;
+    // Safely set property on element using Reflect
+    try {
+      Reflect.set(element, property, displayValue);
+    } catch (error) {
+      console.warn(`Failed to set property "${property}" on element:`, error);
+    }
   });
 }
 
 /**
  * Bind a signal to an element's class list
  */
-export function bindClass(
+export function bindClass<T = unknown>(
   element: Element,
   className: string,
-  signal: Signal<any> | Computed<any>,
-  options: BooleanBindingOptions = {}
+  signal: Signal<T> | Computed<T>,
+  options: BooleanBindingOptions<T> = {}
 ): Effect {
   const { formatter } = options;
 
@@ -117,11 +122,11 @@ export function bindClass(
 /**
  * Bind a signal to an element's style property
  */
-export function bindStyle(
+export function bindStyle<T = unknown>(
   element: HTMLElement,
   property: string,
-  signal: Signal<any> | Computed<any>,
-  options: BindingOptions = {}
+  signal: Signal<T> | Computed<T>,
+  options: BindingOptions<T> = {}
 ): Effect {
   const { formatter } = options;
 
@@ -129,17 +134,22 @@ export function bindStyle(
     const value = signal();
     const displayValue = formatter ? formatter(value) : String(value ?? '');
 
-    (element.style as any)[property] = displayValue;
+    // Safely set CSS property using Reflect
+    try {
+      Reflect.set(element.style, property, displayValue);
+    } catch (error) {
+      console.warn(`Failed to set CSS property "${property}" on element style:`, error);
+    }
   });
 }
 
 /**
  * Bind a signal to an input element's value
  */
-export function bindInputValue(
+export function bindInputValue<T = unknown>(
   input: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
-  signal: Signal<any>,
-  options: BindingOptions = {}
+  signal: Signal<T>,
+  options: BindingOptions<T> = {}
 ): Effect {
   const { formatter } = options;
 
@@ -159,7 +169,7 @@ export function bindInputValue(
     const signalValue = signal();
 
     if (String(signalValue) !== currentValue) {
-      signal(currentValue);
+      signal(currentValue as T);
     }
   };
 
@@ -172,17 +182,17 @@ export function bindInputValue(
       input.removeEventListener('input', updateSignal);
       input.removeEventListener('change', updateSignal);
     },
-    isActive: true
+    isActive: true,
   } as Effect;
 }
 
 /**
  * Bind a signal to a checkbox's checked state
  */
-export function bindCheckbox(
+export function bindCheckbox<T = unknown>(
   checkbox: HTMLInputElement,
-  signal: Signal<any>,
-  options: BooleanBindingOptions = {}
+  signal: Signal<T>,
+  options: BooleanBindingOptions<T> = {}
 ): Effect {
   const { formatter } = options;
 
@@ -202,7 +212,7 @@ export function bindCheckbox(
     const signalValue = signal();
 
     if (Boolean(signalValue) !== currentChecked) {
-      signal(currentChecked);
+      signal(currentChecked as T);
     }
   };
 
@@ -213,20 +223,21 @@ export function bindCheckbox(
       updateCheckbox.stop();
       checkbox.removeEventListener('change', updateSignal);
     },
-    isActive: true
+    isActive: true,
   } as Effect;
 }
 
 /**
  * Create a two-way binding between a signal and an element
  */
-export function bindTwoWay(
+export function bindTwoWay<T = unknown>(
   element: Element,
-  signal: Signal<any>,
-  options: BindingOptions & {
+  signal: Signal<T>,
+  options: {
     attribute?: string;
     property?: string;
     event?: string;
+    formatter?: (value: T) => string;
   } = {}
 ): Effect {
   const { attribute, property, event = 'input' } = options;
@@ -236,9 +247,11 @@ export function bindTwoWay(
     const value = signal();
 
     if (attribute) {
-      bindAttribute(element, attribute, signal, options);
+      const bindingOptions = options.formatter ? { formatter: options.formatter } : {};
+      bindAttribute(element, attribute, signal, bindingOptions);
     } else if (property) {
-      bindProperty(element, property, signal, options);
+      const bindingOptions = options.formatter ? { formatter: options.formatter } : {};
+      bindProperty(element, property, signal, bindingOptions);
     } else if (element instanceof HTMLInputElement) {
       element.value = String(value ?? '');
     } else {
@@ -248,19 +261,25 @@ export function bindTwoWay(
 
   // Two-way binding: element to signal
   const updateSignal = () => {
-    let value: any;
+    let value: unknown;
 
     if (attribute) {
       value = element.getAttribute(attribute);
     } else if (property) {
-      value = (element as any)[property];
+      // Safely get property from element using Reflect
+      try {
+        value = Reflect.get(element, property);
+      } catch (error) {
+        console.warn(`Failed to get property "${property}" from element:`, error);
+        value = null;
+      }
     } else if (element instanceof HTMLInputElement) {
       value = element.value;
     } else {
       value = element.textContent;
     }
 
-    signal(value);
+    signal(value as T);
   };
 
   element.addEventListener(event, updateSignal);
@@ -270,7 +289,7 @@ export function bindTwoWay(
       oneWay.stop();
       element.removeEventListener(event, updateSignal);
     },
-    isActive: true
+    isActive: true,
   } as Effect;
 }
 
@@ -280,6 +299,7 @@ export function bindTwoWay(
 export function bindMultiple(
   element: Element,
   bindings: Array<{
+    // biome-ignore lint/suspicious/noExplicitAny: <any type necessary for multiple bindings>
     signal: Signal<any> | Computed<any>;
     attribute?: string;
     property?: string;
@@ -289,7 +309,7 @@ export function bindMultiple(
     options?: BindingOptions | BooleanBindingOptions;
   }>
 ): Effect[] {
-  return bindings.map(binding => {
+  return bindings.map((binding) => {
     const { signal, attribute, property, className, style, text, options = {} } = binding;
 
     if (text) {
@@ -311,7 +331,7 @@ export function bindMultiple(
 /**
  * Remove all bindings from an element
  */
-export function unbindElement(element: Element): void {
+export function unbindElement(_element: Element): void {
   // This would need to be implemented with a registry of bindings
   // For now, this is a placeholder
   console.warn('unbindElement not fully implemented yet');

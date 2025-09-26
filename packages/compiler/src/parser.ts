@@ -3,28 +3,26 @@
  */
 
 import {
-  TemplateNode,
-  DirectiveNode,
-  IslandNode,
-  ScriptNode,
-  ExpressionNode,
-  ForLoopNode,
-  DIRECTIVE_PATTERNS,
-  ISLAND_STRATEGIES,
   getDirectiveType,
+  type DirectiveNode,
+  type ExpressionNode,
+  type IslandNode,
+  type ScriptNode,
+  type TemplateNode,
+  isValidExpression,
   isValidIslandStrategy,
-  isValidExpression
+  ISLAND_STRATEGIES,
 } from './grammar.js';
 import { parseHTML } from './html-parser.js';
 
 // Re-export types for external use
 export type {
-  TemplateNode,
   DirectiveNode,
+  ExpressionNode,
+  ForLoopNode,
   IslandNode,
   ScriptNode,
-  ExpressionNode,
-  ForLoopNode
+  TemplateNode,
 } from './grammar.js';
 
 export interface ParseOptions {
@@ -90,7 +88,7 @@ export class PlankParser {
         dependencies: this.dependencies,
         islands: this.islands,
         actions: this.actions,
-        errors: this.errors
+        errors: this.errors,
       };
     } catch (error) {
       this.addError(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
@@ -100,7 +98,7 @@ export class PlankParser {
         dependencies: [],
         islands: [],
         actions: [],
-        errors: this.errors
+        errors: this.errors,
       };
     }
   }
@@ -109,7 +107,7 @@ export class PlankParser {
     // Use HTML parser to parse the template
     const htmlResult = parseHTML(this.source, {
       dev: this.dev,
-      filename: this.filename
+      filename: this.filename,
     });
 
     // Add HTML parsing errors to our error list
@@ -125,12 +123,13 @@ export class PlankParser {
     return htmlResult.ast;
   }
 
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: <future implementation>
   private parseElement(tagName: string, attributes: Record<string, string>): TemplateNode {
     const element: TemplateNode = {
       type: 'element',
       tag: tagName,
       attributes,
-      children: []
+      children: [],
     };
 
     // Parse directives
@@ -153,7 +152,7 @@ export class PlankParser {
     const directive: DirectiveNode = {
       type,
       name,
-      value
+      value,
     };
 
     // Parse expression for reactive directives
@@ -184,7 +183,7 @@ export class PlankParser {
 
     // Determine loading strategy
     let strategy: IslandNode['strategy'] = 'load';
-    for (const [attr, value] of Object.entries(attributes)) {
+    for (const [attr, _value] of Object.entries(attributes)) {
       if (isValidIslandStrategy(attr)) {
         strategy = ISLAND_STRATEGIES[attr as keyof typeof ISLAND_STRATEGIES];
         break;
@@ -200,14 +199,15 @@ export class PlankParser {
 
     return {
       type: 'variable',
-      value: expression
+      value: expression,
     };
   }
 
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: <future implementation>
   private parseScript(content: string, type: 'server' | 'client'): ScriptNode {
     const script: ScriptNode = {
       type,
-      content
+      content,
     };
 
     // Extract exports for server scripts
@@ -221,10 +221,12 @@ export class PlankParser {
   private extractServerExports(content: string): string[] {
     const exports: string[] = [];
     const exportRegex = /export\s+(?:async\s+)?function\s+(\w+)/g;
-    let match;
+    let match: RegExpExecArray | null = null;
 
-    while ((match = exportRegex.exec(content)) !== null) {
-      exports.push(match[1]!);
+    match = exportRegex.exec(content);
+    while (match !== null) {
+      exports.push(match[1] ?? '');
+      match = exportRegex.exec(content);
     }
 
     return exports;
@@ -259,7 +261,7 @@ export class PlankParser {
       message,
       line,
       column,
-      filename: this.filename || undefined
+      filename: this.filename || undefined,
     });
   }
 }
@@ -279,6 +281,6 @@ export function validate(source: string): { valid: boolean; errors: ParseError[]
   const result = parse(source);
   return {
     valid: result.errors.length === 0,
-    errors: result.errors
+    errors: result.errors,
   };
 }

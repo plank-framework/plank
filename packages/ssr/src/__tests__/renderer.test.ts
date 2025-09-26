@@ -2,7 +2,7 @@
  * @fileoverview Tests for server-side renderer
  */
 
-import { describe, test, expect } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { SSRRenderer, StreamingWriter } from '../renderer.js';
 import type { SSRContext, StreamingOptions } from '../types.js';
 
@@ -11,7 +11,7 @@ describe('SSRRenderer', () => {
     templateDir: '/templates',
     assetsDir: '/assets',
     baseUrl: '/',
-    streaming: false
+    streaming: false,
   });
 
   test('should render basic template', async () => {
@@ -21,7 +21,7 @@ describe('SSRRenderer', () => {
       headers: {},
       params: {},
       query: {},
-      data: {}
+      data: {},
     };
 
     const result = await renderer.render('/test.plk', context);
@@ -44,8 +44,8 @@ describe('SSRRenderer', () => {
       streaming: {
         enabled: true,
         chunkSize: 1024,
-        timeout: 5000
-      }
+        timeout: 5000,
+      },
     };
 
     const result = await renderer.render('/test.plk', context);
@@ -60,7 +60,7 @@ describe('SSRRenderer', () => {
 describe('StreamingWriter', () => {
   test('should write HTML chunks', () => {
     const options: StreamingOptions = {
-      enabled: false
+      enabled: false,
     };
     const writer = new StreamingWriter(options);
 
@@ -74,19 +74,19 @@ describe('StreamingWriter', () => {
 
   test('should escape HTML properly', () => {
     const options: StreamingOptions = {
-      enabled: false
+      enabled: false,
     };
     const writer = new StreamingWriter(options);
 
     writer.writeEscaped('<script>alert("xss")</script>');
     const html = writer.getHtml();
-    
+
     expect(html).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
   });
 
   test('should escape attributes properly', () => {
     const options: StreamingOptions = {
-      enabled: false
+      enabled: false,
     };
     const writer = new StreamingWriter(options);
 
@@ -100,7 +100,7 @@ describe('StreamingWriter', () => {
 
   test('should handle streaming mode', async () => {
     const options: StreamingOptions = {
-      enabled: true
+      enabled: true,
     };
     const writer = new StreamingWriter(options);
 
@@ -109,7 +109,7 @@ describe('StreamingWriter', () => {
         writer.setController(controller);
         writer.write('<div>Hello</div>');
         writer.close();
-      }
+      },
     });
 
     const reader = stream.getReader();

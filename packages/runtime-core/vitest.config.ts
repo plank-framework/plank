@@ -7,7 +7,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@plank/runtime-core': './dist/index.js'
-    }
-  }
+      '@plank/runtime-core': './dist/index.js',
+    },
+  },
 });

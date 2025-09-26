@@ -14,7 +14,18 @@ export interface TemplateNode {
 }
 
 export interface DirectiveNode {
-  type: 'on' | 'bind' | 'x-if' | 'x-else' | 'x-show' | 'x-for' | 'x-key' | 'class' | 'attr' | 'use-action' | 'unsafe-html';
+  type:
+    | 'on'
+    | 'bind'
+    | 'x-if'
+    | 'x-else'
+    | 'x-show'
+    | 'x-for'
+    | 'x-key'
+    | 'class'
+    | 'attr'
+    | 'use-action'
+    | 'unsafe-html';
   name: string;
   value: string;
   expression?: ExpressionNode;
@@ -48,7 +59,8 @@ export interface ForLoopNode {
 // Directive patterns
 export const DIRECTIVE_PATTERNS = {
   // Event handlers: on:click, on:submit, etc.
-  EVENT: /^on:(click|submit|change|input|focus|blur|keydown|keyup|keypress|mousedown|mouseup|mouseover|mouseout|load|unload|resize|scroll)$/,
+  EVENT:
+    /^on:(click|submit|change|input|focus|blur|keydown|keyup|keypress|mousedown|mouseup|mouseover|mouseout|load|unload|resize|scroll)$/,
 
   // Two-way binding: bind:value, bind:checked, etc.
   BIND: /^bind:([a-zA-Z][a-zA-Z0-9-]*)$/,
@@ -82,24 +94,53 @@ export const ISLAND_STRATEGIES = {
 
 // Expression operators
 export const EXPRESSION_OPERATORS = [
-  '&&', '||', '??', // Logical
-  '===', '!==', '==', '!=', // Equality
-  '<', '>', '<=', '>=', // Comparison
-  '+', '-', '*', '/', '%', // Arithmetic
-  '?', ':', // Conditional
+  '&&',
+  '||',
+  '??', // Logical
+  '===',
+  '!==',
+  '==',
+  '!=', // Equality
+  '<',
+  '>',
+  '<=',
+  '>=', // Comparison
+  '+',
+  '-',
+  '*',
+  '/',
+  '%', // Arithmetic
+  '?',
+  ':', // Conditional
 ] as const;
 
 // Reserved keywords
 export const RESERVED_KEYWORDS = [
-  'true', 'false', 'null', 'undefined',
-  'if', 'else', 'for', 'while', 'function',
-  'return', 'break', 'continue', 'var', 'let', 'const',
-  'import', 'export', 'from', 'as', 'default',
+  'true',
+  'false',
+  'null',
+  'undefined',
+  'if',
+  'else',
+  'for',
+  'while',
+  'function',
+  'return',
+  'break',
+  'continue',
+  'var',
+  'let',
+  'const',
+  'import',
+  'export',
+  'from',
+  'as',
+  'default',
 ] as const;
 
 // Template syntax validation
 export function isValidDirective(name: string): boolean {
-  return Object.values(DIRECTIVE_PATTERNS).some(pattern => pattern.test(name));
+  return Object.values(DIRECTIVE_PATTERNS).some((pattern) => pattern.test(name));
 }
 
 export function getDirectiveType(name: string): DirectiveNode['type'] | null {
@@ -114,31 +155,31 @@ export function getDirectiveType(name: string): DirectiveNode['type'] | null {
   return null;
 }
 
-export function isValidIslandStrategy(strategy: string): strategy is keyof typeof ISLAND_STRATEGIES {
+export function isValidIslandStrategy(
+  strategy: string
+): strategy is keyof typeof ISLAND_STRATEGIES {
   return strategy in ISLAND_STRATEGIES;
 }
 
-export function isValidExpression(expression: string): boolean {
-  // Basic validation - more complex parsing will be implemented later
-  try {
-    // Check for balanced parentheses and brackets
-    const stack: string[] = [];
-    for (const char of expression) {
-      if (char === '(' || char === '[' || char === '{') {
-        stack.push(char);
-      } else if (char === ')' || char === ']' || char === '}') {
-        if (stack.length === 0) return false;
-        const last = stack.pop()!;
-        if (
-          (char === ')' && last !== '(') ||
-          (char === ']' && last !== '[') ||
-          (char === '}' && last !== '{')
-        ) {
-          return false;
-        }
+function areBracketsBalanced(expression: string): boolean {
+  const stack: string[] = [];
+  const pairs: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+
+  for (const char of expression) {
+    if (['(', '[', '{'].includes(char)) {
+      stack.push(char);
+    } else if (char in pairs) {
+      if (stack.length === 0 || stack.pop() !== pairs[char]) {
+        return false;
       }
     }
-    return stack.length === 0;
+  }
+  return stack.length === 0;
+}
+
+export function isValidExpression(expression: string): boolean {
+  try {
+    return areBracketsBalanced(expression);
   } catch {
     return false;
   }

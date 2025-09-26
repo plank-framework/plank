@@ -3,26 +3,25 @@
  * Streaming HTML output with progressive enhancement
  */
 
-// Core types
-export type {
-  SSRContext,
-  SSRResult,
-  TemplateRenderer,
-  IslandComponent,
-  ServerAction,
-  SSRConfig,
-  StreamingOptions
-} from './types.js';
+// Re-export compiler types for convenience
+export type { ParseResult, TemplateNode } from '@plank/compiler';
 
 // Core renderer
 export { SSRRenderer, StreamingWriter } from './renderer.js';
 
 // Streaming utilities
 export {
-  StreamingResponse,
   ProgressiveEnhancement,
-  StreamingTemplates
+  StreamingResponse,
+  StreamingTemplates,
 } from './streaming.js';
-
-// Re-export compiler types for convenience
-export type { TemplateNode, ParseResult } from '@plank/compiler';
+// Core types
+export type {
+  IslandComponent,
+  ServerAction,
+  SSRConfig,
+  SSRContext,
+  SSRResult,
+  StreamingOptions,
+  TemplateRenderer,
+} from './types.js';

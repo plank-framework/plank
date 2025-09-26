@@ -14,6 +14,19 @@
       "dependsOn": ["build"],
       "outputs": ["coverage/**"]
     },
+    "test:run": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "test:coverage": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:coverage:ui": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"],
+      "cache": false
+    },
     "type-check": {
       "dependsOn": ["^build"],
       "outputs": []

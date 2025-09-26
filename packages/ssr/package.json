@@ -14,19 +14,18 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:ui": "vitest run --coverage --ui"
   },
   "dependencies": {
     "@plank/compiler": "workspace:*",
     "@plank/runtime-core": "workspace:*"
   },
-  "devDependencies": {
-    "typescript": "^5.3.0",
-    "vitest": "^1.0.0",
-    "@types/node": "^20.0.0"
-  },
+  "devDependencies": {},
   "files": [
     "dist"
   ]

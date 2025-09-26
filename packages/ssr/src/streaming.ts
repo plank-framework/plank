@@ -131,76 +131,67 @@ export class StreamingResponse {
 }
 
 /**
- * Progressive enhancement utilities
+ * Generate HTML for progressive enhancement
  */
-export class ProgressiveEnhancement {
-  /**
-   * Generate HTML for progressive enhancement
-   */
-  static generateEnhancementScript(): string {
-    return `<script type="module">
-      // Progressive enhancement for Plank
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js');
-      }
-      
-      // Preload critical resources
-      const link = document.createElement('link');
-      link.rel = 'modulepreload';
-      link.href = '/@plank/runtime-dom';
-      document.head.appendChild(link);
-    </script>`;
-  }
+export function generateEnhancementScript(): string {
+  return `<script type="module">
+    // Progressive enhancement for Plank
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
 
-  /**
-   * Generate viewport meta tag
-   */
-  static generateViewportMeta(): string {
-    return '<meta name="viewport" content="width=device-width, initial-scale=1">';
-  }
-
-  /**
-   * Generate preconnect hints
-   */
-  static generatePreconnectHints(domains: string[]): string {
-    return domains.map((domain) => `<link rel="preconnect" href="${domain}">`).join('\n');
-  }
+    // Preload critical resources
+    const link = document.createElement('link');
+    link.rel = 'modulepreload';
+    link.href = '/@plank/runtime-dom';
+    document.head.appendChild(link);
+  </script>`;
 }
 
 /**
- * Streaming template utilities
+ * Generate viewport meta tag
  */
-export class StreamingTemplates {
-  /**
-   * Generate HTML document structure
-   */
-  static generateDocument(
-    title: string,
-    content: string,
-    options: {
-      lang?: string;
-      charset?: string;
-      viewport?: string;
-      styles?: string[];
-      scripts?: string[];
-      preconnect?: string[];
-    } = {}
-  ): string {
-    const {
-      lang = 'en',
-      charset = 'utf-8',
-      viewport = 'width=device-width, initial-scale=1',
-      styles = [],
-      scripts = [],
-      preconnect = [],
-    } = options;
+export function generateViewportMeta(): string {
+  return '<meta name="viewport" content="width=device-width, initial-scale=1">';
+}
 
-    return `<!DOCTYPE html>
+/**
+ * Generate preconnect hints
+ */
+export function generatePreconnectHints(domains: string[]): string {
+  return domains.map((domain) => `<link rel="preconnect" href="${domain}">`).join('\n');
+}
+
+/**
+ * Generate HTML document structure
+ */
+export function generateDocument(
+  title: string,
+  content: string,
+  options: {
+    lang?: string;
+    charset?: string;
+    viewport?: string;
+    styles?: string[];
+    scripts?: string[];
+    preconnect?: string[];
+  } = {}
+): string {
+  const {
+    lang = 'en',
+    charset = 'utf-8',
+    viewport = 'width=device-width, initial-scale=1',
+    styles = [],
+    scripts = [],
+    preconnect = [],
+  } = options;
+
+  return `<!DOCTYPE html>
 <html lang="${lang}">
 <head>
   <meta charset="${charset}">
   <meta name="viewport" content="${viewport}">
-  <title>${StreamingTemplates.escapeHtml(title)}</title>
+  <title>${escapeHtml(title)}</title>
   ${preconnect.map((domain) => `<link rel="preconnect" href="${domain}">`).join('\n')}
   ${styles.map((href) => `<link rel="stylesheet" href="${href}">`).join('\n')}
 </head>
@@ -209,86 +200,85 @@ export class StreamingTemplates {
   ${scripts.map((src) => `<script type="module" src="${src}"></script>`).join('\n')}
 </body>
 </html>`;
-  }
+}
 
-  /**
-   * Generate loading skeleton
-   */
-  static generateSkeleton(type: 'card' | 'list' | 'text' | 'image'): string {
-    const skeletons = {
-      card: `<div class="skeleton-card">
-        <div class="skeleton-image"></div>
-        <div class="skeleton-content">
-          <div class="skeleton-title"></div>
-          <div class="skeleton-text"></div>
-        </div>
-      </div>`,
-      list: `<div class="skeleton-list">
-        <div class="skeleton-item"></div>
-        <div class="skeleton-item"></div>
-        <div class="skeleton-item"></div>
-      </div>`,
-      text: `<div class="skeleton-text">
-        <div class="skeleton-line"></div>
-        <div class="skeleton-line"></div>
-        <div class="skeleton-line short"></div>
-      </div>`,
-      image: `<div class="skeleton-image"></div>`,
-    };
+/**
+ * Generate loading skeleton
+ */
+export function generateSkeleton(type: 'card' | 'list' | 'text' | 'image'): string {
+  const skeletons = {
+    card: `<div class="skeleton-card">
+      <div class="skeleton-image"></div>
+      <div class="skeleton-content">
+        <div class="skeleton-title"></div>
+        <div class="skeleton-text"></div>
+      </div>
+    </div>`,
+    list: `<div class="skeleton-list">
+      <div class="skeleton-item"></div>
+      <div class="skeleton-item"></div>
+      <div class="skeleton-item"></div>
+    </div>`,
+    text: `<div class="skeleton-text">
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line short"></div>
+    </div>`,
+    image: `<div class="skeleton-image"></div>`,
+  };
 
-    return skeletons[type] + StreamingTemplates.generateSkeletonStyles();
-  }
+  return skeletons[type] + generateSkeletonStyles();
+}
 
-  /**
-   * Generate skeleton CSS
-   */
-  private static generateSkeletonStyles(): string {
-    return `<style>
-      .skeleton-card, .skeleton-list, .skeleton-text, .skeleton-image {
-        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-        background-size: 200% 100%;
-        animation: skeleton-loading 1.5s infinite;
-      }
-      .skeleton-card {
-        border-radius: 8px;
-        padding: 16px;
-        margin: 8px 0;
-      }
-      .skeleton-image {
-        width: 100%;
-        height: 200px;
-        border-radius: 4px;
-        margin-bottom: 12px;
-      }
-      .skeleton-title {
-        height: 20px;
-        width: 60%;
-        margin-bottom: 8px;
-      }
-      .skeleton-line {
-        height: 16px;
-        width: 100%;
-        margin-bottom: 8px;
-      }
-      .skeleton-line.short {
-        width: 80%;
-      }
-      @keyframes skeleton-loading {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
-      }
-    </style>`;
-  }
+/**
+ * Generate skeleton CSS
+ */
+function generateSkeletonStyles(): string {
+  return `<style>
+    .skeleton-card, .skeleton-list, .skeleton-text, .skeleton-image {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+    }
+    .skeleton-card {
+      border-radius: 8px;
+      padding: 16px;
+      margin: 8px 0;
+    }
+    .skeleton-image {
+      width: 100%;
+      height: 200px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .skeleton-title {
+      height: 20px;
+      width: 60%;
+      margin-bottom: 8px;
+    }
+    .skeleton-line {
+      height: 16px;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    .skeleton-line.short {
+      width: 80%;
+    }
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>`;
+}
 
-  /**
-   * Escape HTML special characters
-   */
-  private static escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+/**
+ * Escape HTML special characters
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

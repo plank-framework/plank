@@ -364,10 +364,31 @@ export class WorkingHTMLParser {
     // Determine script type
     const type = attributes.type === 'server' ? 'server' : 'client';
 
-    return {
+    const script: ScriptNode = {
       type,
       content: content.trim(),
     };
+
+    // Extract exports for server scripts
+    if (type === 'server') {
+      script.exports = this.extractServerExports(content.trim());
+    }
+
+    return script;
+  }
+
+  private extractServerExports(content: string): string[] {
+    const exports: string[] = [];
+    const exportRegex = /export\s+(?:async\s+)?function\s+(\w+)/g;
+    let match: RegExpExecArray | null = null;
+
+    match = exportRegex.exec(content);
+    while (match !== null) {
+      exports.push(match[1] ?? '');
+      match = exportRegex.exec(content);
+    }
+
+    return exports;
   }
 
   private createElement(

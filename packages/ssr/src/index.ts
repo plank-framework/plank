@@ -11,9 +11,12 @@ export { SSRRenderer, StreamingWriter } from './renderer.js';
 
 // Streaming utilities
 export {
-  ProgressiveEnhancement,
+  generateDocument,
+  generateEnhancementScript,
+  generatePreconnectHints,
+  generateSkeleton,
+  generateViewportMeta,
   StreamingResponse,
-  StreamingTemplates,
 } from './streaming.js';
 // Core types
 export type {

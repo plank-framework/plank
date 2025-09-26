@@ -377,7 +377,7 @@ export function createDebouncedAction<T = unknown>(
   data: Computed<T | null>;
 } {
   const action = createAction<T>(url, options);
-  let timeoutId: number | undefined;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   const execute = async (data?: unknown): Promise<ActionResult<T>> => {
     return new Promise((resolve, reject) => {

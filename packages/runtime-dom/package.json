@@ -20,17 +20,14 @@
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:ui": "vitest run --coverage --ui"
   },
   "dependencies": {
     "@plank/runtime-core": "workspace:*"
   },
-  "devDependencies": {
-    "typescript": "^5.4.5",
-    "vitest": "^3.2.4",
-    "@vitest/ui": "^3.2.4",
-    "jsdom": "^24.1.0"
-  },
+  "devDependencies": {},
   "publishConfig": {
     "access": "public"
   }

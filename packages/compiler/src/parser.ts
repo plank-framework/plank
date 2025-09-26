@@ -3,15 +3,15 @@
  */
 
 import {
-  getDirectiveType,
   type DirectiveNode,
   type ExpressionNode,
+  getDirectiveType,
+  ISLAND_STRATEGIES,
   type IslandNode,
-  type ScriptNode,
-  type TemplateNode,
   isValidExpression,
   isValidIslandStrategy,
-  ISLAND_STRATEGIES,
+  type ScriptNode,
+  type TemplateNode,
 } from './grammar.js';
 import { parseHTML } from './html-parser.js';
 
@@ -201,35 +201,6 @@ export class PlankParser {
       type: 'variable',
       value: expression,
     };
-  }
-
-  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: <future implementation>
-  private parseScript(content: string, type: 'server' | 'client'): ScriptNode {
-    const script: ScriptNode = {
-      type,
-      content,
-    };
-
-    // Extract exports for server scripts
-    if (type === 'server') {
-      script.exports = this.extractServerExports(content);
-    }
-
-    return script;
-  }
-
-  private extractServerExports(content: string): string[] {
-    const exports: string[] = [];
-    const exportRegex = /export\s+(?:async\s+)?function\s+(\w+)/g;
-    let match: RegExpExecArray | null = null;
-
-    match = exportRegex.exec(content);
-    while (match !== null) {
-      exports.push(match[1] ?? '');
-      match = exportRegex.exec(content);
-    }
-
-    return exports;
   }
 
   private extractIslands(node: TemplateNode): void {

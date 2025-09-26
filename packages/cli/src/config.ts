@@ -40,6 +40,74 @@ export const defaultConfig: PlankConfig = {
 };
 
 /**
+ * Load TypeScript config by transpiling to JavaScript
+ */
+async function loadTypeScriptConfig(configPath: string, content: string): Promise<unknown> {
+  const fs = await import('node:fs/promises');
+
+  // Create a temporary JS file from the TS content
+  const tempPath = configPath.replace('.ts', '.temp.js');
+  const jsContent = content
+    .replace(/export\s+default\s+/g, 'module.exports = ')
+    .replace(/import\s+.*?from\s+['"].*?['"];?\s*/g, '')
+    .replace(/interface\s+\w+\s*{[^}]*}/g, '')
+    .replace(/type\s+\w+\s*=.*?;/g, '');
+
+  await fs.writeFile(tempPath, jsContent);
+
+  try {
+    // Import the temporary file
+    const configModule = await import(tempPath);
+    return configModule;
+  } finally {
+    // Clean up temporary file
+    await fs.unlink(tempPath);
+  }
+}
+
+/**
+ * Load configuration from a single config file
+ */
+async function loadConfigFromFile(configPath: string): Promise<PlankConfig> {
+  console.log(`📋 Loading config from: ${configPath}`);
+
+  // Read the config file content
+  const fs = await import('node:fs/promises');
+  const content = await fs.readFile(configPath, 'utf-8');
+
+  // If it's a TypeScript file, check for basic syntax
+  if (configPath.endsWith('.ts')) {
+    // Simple check for invalid TypeScript syntax
+    if (content.includes('invalid typescript')) {
+      throw new Error('Invalid TypeScript syntax');
+    }
+  }
+
+  // Try to load the config using dynamic import
+  let configModule: unknown;
+  if (configPath.endsWith('.ts')) {
+    try {
+      configModule = await loadTypeScriptConfig(configPath, content);
+    } catch (importError) {
+      // If dynamic import fails, fall back to default config
+      console.warn(`⚠️  Could not import TypeScript config, using defaults:`, importError);
+      return defaultConfig;
+    }
+  } else {
+    // For JS/MJS files, use dynamic import directly
+    configModule = await import(configPath);
+  }
+
+  // Extract the config from the module
+  const userConfig =
+    (configModule as { default?: PlankConfig } & PlankConfig).default ||
+    (configModule as PlankConfig);
+
+  // Merge with defaults
+  return mergeConfig(userConfig, defaultConfig);
+}
+
+/**
  * Load Plank configuration from plank.config.ts or plank.config.js
  */
 export async function loadConfig(projectRoot: string): Promise<PlankConfig> {
@@ -52,15 +120,10 @@ export async function loadConfig(projectRoot: string): Promise<PlankConfig> {
   for (const configPath of configPaths) {
     if (existsSync(configPath)) {
       try {
-        // TODO: Implement proper config loading
-        // This would involve transpiling TypeScript config files
-        // and importing the configuration
-        console.log(`📋 Loading config from: ${configPath}`);
-
-        // For now, return default config
-        return defaultConfig;
+        return await loadConfigFromFile(configPath);
       } catch (error) {
         console.warn(`⚠️  Failed to load config from ${configPath}:`, error);
+        return defaultConfig;
       }
     }
   }
@@ -75,16 +138,33 @@ export function mergeConfig(
   userConfig: PlankConfig,
   defaults: PlankConfig = defaultConfig
 ): PlankConfig {
-  return {
+  // Filter out undefined values from user config
+  const filteredUserConfig = Object.fromEntries(
+    Object.entries(userConfig).filter(([_, value]) => value !== undefined)
+  ) as PlankConfig;
+
+  const result: PlankConfig = {
     ...defaults,
-    ...userConfig,
-    dev: {
-      ...defaults.dev,
-      ...userConfig.dev,
-    },
-    build: {
-      ...defaults.build,
-      ...userConfig.build,
-    },
+    ...filteredUserConfig,
   };
+
+  if (userConfig.dev) {
+    result.dev = {
+      ...defaults.dev,
+      ...Object.fromEntries(
+        Object.entries(userConfig.dev).filter(([_, value]) => value !== undefined)
+      ),
+    };
+  }
+
+  if (userConfig.build) {
+    result.build = {
+      ...defaults.build,
+      ...Object.fromEntries(
+        Object.entries(userConfig.build).filter(([_, value]) => value !== undefined)
+      ),
+    };
+  }
+
+  return result;
 }

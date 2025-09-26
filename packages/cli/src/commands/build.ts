@@ -49,7 +49,7 @@ export async function buildCommand(options: BuildOptions = {}): Promise<void> {
 
     // Step 1: Create output directory
     console.log('📁 Creating output directory...');
-    await mkdir(outputDir, { recursive: true });
+    await mkdir(resolve(projectRoot, outputDir), { recursive: true });
 
     // Step 2: Initialize router and discover routes
     console.log('🔍 Discovering routes...');

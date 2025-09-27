@@ -369,6 +369,190 @@ describe('Plank Parser', () => {
     const conditionalDiv = div?.children?.[2];
     expect(conditionalDiv?.directive?.value).toBe('{isVisible}');
   });
+
+  test('should handle parser errors gracefully', () => {
+    const source = `
+      <div>
+        <button on:invalid-directive={value}>Click</button>
+      </div>
+    `;
+
+    const result = parse(source);
+
+    // Should still parse successfully but may have validation errors
+    expect(result.ast.type).toBe('template');
+    expect(result.ast.children).toHaveLength(1);
+  });
+
+  test('should handle malformed HTML gracefully', () => {
+    const source = `
+      <div>
+        <p>Unclosed paragraph
+        <div>Nested div
+      </div>
+    `;
+
+    const result = parse(source);
+
+    // Should still parse and return an AST
+    expect(result.ast.type).toBe('template');
+    expect(result.ast.children).toBeDefined();
+  });
+
+  test('should handle empty template', () => {
+    const source = '';
+
+    const result = parse(source);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.ast.type).toBe('template');
+    expect(result.ast.children).toHaveLength(0);
+  });
+
+  test('should handle whitespace-only template', () => {
+    const source = '   \n  \t  ';
+
+    const result = parse(source);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.ast.type).toBe('template');
+    expect(result.ast.children).toHaveLength(0);
+  });
+
+  test('should handle complex nested structures', () => {
+    const source = `
+      <div class="container">
+        <header>
+          <nav>
+            <ul>
+              <li><a href="/">Home</a></li>
+              <li><a href="/about">About</a></li>
+            </ul>
+          </nav>
+        </header>
+        <main>
+          <section>
+            <article>
+              <h1>Title</h1>
+              <p>Content</p>
+            </article>
+          </section>
+        </main>
+        <footer>
+          <p>Footer content</p>
+        </footer>
+      </div>
+    `;
+
+    const result = parse(source);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.ast.type).toBe('template');
+    expect(result.ast.children).toHaveLength(1);
+
+    const container = result.ast.children?.[0];
+    expect(container?.tag).toBe('div');
+    expect(container?.attributes?.class).toBe('container');
+    expect(container?.children).toHaveLength(3);
+
+    const header = container?.children?.[0];
+    expect(header?.tag).toBe('header');
+    expect(header?.children).toHaveLength(1);
+
+    const nav = header?.children?.[0];
+    expect(nav?.tag).toBe('nav');
+    expect(nav?.children).toHaveLength(1);
+
+    const ul = nav?.children?.[0];
+    expect(ul?.tag).toBe('ul');
+    expect(ul?.children).toHaveLength(2);
+  });
+
+  test('should handle self-closing tags', () => {
+    const source = `
+      <div>
+        <img src="image.jpg" alt="Image">
+        <br>
+        <hr>
+        <input type="text" name="field">
+      </div>
+    `;
+
+    const result = parse(source);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.ast.children).toHaveLength(1);
+
+    const div = result.ast.children?.[0];
+    expect(div?.children).toHaveLength(4);
+
+    const img = div?.children?.[0];
+    expect(img?.tag).toBe('img');
+    expect(img?.attributes?.src).toBe('image.jpg');
+    expect(img?.attributes?.alt).toBe('Image');
+
+    const br = div?.children?.[1];
+    expect(br?.tag).toBe('br');
+
+    const hr = div?.children?.[2];
+    expect(hr?.tag).toBe('hr');
+
+    const input = div?.children?.[3];
+    expect(input?.tag).toBe('input');
+    expect(input?.attributes?.type).toBe('text');
+    expect(input?.attributes?.name).toBe('field');
+  });
+
+  test('should handle text nodes with special characters', () => {
+    const source = `
+      <div>
+        <p>Text with &amp; entities</p>
+        <p>Text with &lt; and &gt; symbols</p>
+        <p>Text with &quot;quotes&quot; and &apos;apostrophes&apos;</p>
+      </div>
+    `;
+
+    const result = parse(source);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.ast.children).toHaveLength(1);
+
+    const div = result.ast.children?.[0];
+    expect(div?.children).toHaveLength(3);
+
+    const p1 = div?.children?.[0];
+    expect(p1?.children?.[0]?.text).toBe('Text with &amp; entities');
+
+    const p2 = div?.children?.[1];
+    expect(p2?.children?.[0]?.text).toBe('Text with &lt; and &gt; symbols');
+
+    const p3 = div?.children?.[2];
+    expect(p3?.children?.[0]?.text).toBe('Text with &quot;quotes&quot; and &apos;apostrophes&apos;');
+  });
+
+  test('should handle attributes with special characters', () => {
+    const source = `
+      <div>
+        <input data-value="value with spaces" data-special="special&chars">
+        <button title="Button with &quot;quotes&quot;">Click</button>
+      </div>
+    `;
+
+    const result = parse(source);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.ast.children).toHaveLength(1);
+
+    const div = result.ast.children?.[0];
+    expect(div?.children).toHaveLength(2);
+
+    const input = div?.children?.[0];
+    expect(input?.attributes?.['data-value']).toBe('value with spaces');
+    expect(input?.attributes?.['data-special']).toBe('special&chars');
+
+    const button = div?.children?.[1];
+    expect(button?.attributes?.title).toBe('Button with &quot;quotes&quot;');
+  });
 });
 
 describe('Plank Compiler', () => {

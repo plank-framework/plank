@@ -4,12 +4,13 @@
  */
 
 import { parse } from './parser.js';
+import { generateCode } from './codegen.js';
 
 export interface CompilerOptions {
   /** Enable development mode with additional debugging info */
   dev?: boolean;
   /** Target runtime environment */
-  target?: 'node' | 'bun' | 'edge' | 'deno';
+  target?: 'node' | 'bun' | 'edge' | 'deno' | 'client' | 'server';
   /** Enable source maps */
   sourceMap?: boolean;
   /** Source file path for error reporting */
@@ -43,15 +44,22 @@ export function compile(source: string, options: CompilerOptions = {}): CompileR
     filename: options.filename,
   });
 
-  // TODO: Implement code generation from AST
-  // This is a placeholder for Phase A implementation
+  // Generate code from AST
+  const target = options.target || 'client';
+  const codegenOptions: Parameters<typeof generateCode>[1] = {
+    target: target as 'server' | 'client',
+    dev: options.dev ?? false,
+    filename: options.filename,
+    sourceMap: options.sourceMap,
+  };
+  const codegenResult = generateCode(parseResult, codegenOptions);
 
   return {
-    code: '// TODO: Implement template compilation from AST',
+    code: codegenResult.code,
     scripts: parseResult.scripts,
-    dependencies: parseResult.dependencies,
-    islands: parseResult.islands,
-    actions: parseResult.actions,
+    dependencies: codegenResult.dependencies,
+    islands: codegenResult.islands,
+    actions: codegenResult.actions,
     errors: parseResult.errors,
   };
 }
@@ -79,3 +87,5 @@ export type {
 } from './parser.js';
 // Re-export parser functionality
 export { parse, validate } from './parser.js';
+// Re-export code generation functionality
+export { generateCode, generateDOMIR } from './codegen.js';

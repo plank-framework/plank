@@ -382,9 +382,9 @@ describe('Plank Compiler', () => {
 
     const result = compile(source);
 
-    expect(result.code).toBe('// TODO: Implement template compilation from AST');
+    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
     expect(result.scripts).toHaveLength(0);
-    expect(result.dependencies).toHaveLength(0);
+    expect(result.dependencies).toHaveLength(1);
     expect(result.islands).toHaveLength(0);
     expect(result.actions).toHaveLength(0);
     expect(result.errors).toHaveLength(0);
@@ -411,13 +411,13 @@ describe('Plank Compiler', () => {
 
     const result = compile(source, options);
 
-    expect(result.code).toBe('// TODO: Implement template compilation from AST');
+    expect(result.code).toContain('import { SSRRenderer, StreamingWriter } from \'@plank/ssr\'');
     expect(result.scripts).toHaveLength(0);
-    expect(result.dependencies).toHaveLength(0);
+    expect(result.dependencies).toHaveLength(1);
     expect(result.islands).toHaveLength(1);
     expect(result.islands).toContain('./Counter.plk');
     expect(result.actions).toHaveLength(1);
-    expect(result.actions).toContain('{createTodo}');
+    expect(result.actions).toContain('createTodo');
     expect(result.errors).toHaveLength(0);
   });
 
@@ -439,11 +439,11 @@ describe('Plank Compiler', () => {
 
     const result = compile(source);
 
-    expect(result.code).toBe('// TODO: Implement template compilation from AST');
+    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
     expect(result.scripts).toHaveLength(2);
     expect(result.scripts[0]?.type).toBe('server');
     expect(result.scripts[1]?.type).toBe('client');
-    expect(result.dependencies).toHaveLength(0);
+    expect(result.dependencies).toHaveLength(1);
     expect(result.islands).toHaveLength(0);
     expect(result.actions).toHaveLength(0);
     expect(result.errors).toHaveLength(0);
@@ -458,7 +458,7 @@ describe('Plank Compiler', () => {
 
     const result = compile(source);
 
-    expect(result.code).toBe('// TODO: Implement template compilation from AST');
+    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
     expect(result.errors.length).toBeGreaterThan(0);
     expect(result.errors[0]?.message).toContain('Island missing required "src" attribute');
   });
@@ -468,9 +468,9 @@ describe('Plank Compiler', () => {
 
     const result = compile(source);
 
-    expect(result.code).toBe('// TODO: Implement template compilation from AST');
+    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
     expect(result.scripts).toHaveLength(0);
-    expect(result.dependencies).toHaveLength(0);
+    expect(result.dependencies).toHaveLength(1);
     expect(result.islands).toHaveLength(0);
     expect(result.actions).toHaveLength(0);
     expect(result.errors).toHaveLength(0);

@@ -14,6 +14,7 @@ import {
   bindStyle,
   bindText,
   bindTwoWay,
+  unbindElement,
 } from '../bindings.js';
 
 describe('DOM Bindings', () => {
@@ -417,6 +418,39 @@ describe('DOM Bindings', () => {
       for (const effect of effects) {
         effect.stop();
       }
+    });
+  });
+
+  describe('binding registry', () => {
+    test('should register and unregister bindings', () => {
+      const element = document.createElement('div');
+      const count = signal(0);
+
+      // Create a binding
+      const binding = bindText(element, count);
+      expect(binding.isActive).toBe(true);
+
+      // Unbind element should stop all bindings
+      unbindElement(element);
+      expect(binding.isActive).toBe(false);
+    });
+
+    test('should handle multiple bindings on same element', () => {
+      const element = document.createElement('div');
+      const count = signal(0);
+      const name = signal('test');
+
+      // Create multiple bindings
+      const binding1 = bindText(element, count);
+      const binding2 = bindAttribute(element, 'data-name', name);
+
+      expect(binding1.isActive).toBe(true);
+      expect(binding2.isActive).toBe(true);
+
+      // Unbind element should stop all bindings
+      unbindElement(element);
+      expect(binding1.isActive).toBe(false);
+      expect(binding2.isActive).toBe(false);
     });
   });
 });

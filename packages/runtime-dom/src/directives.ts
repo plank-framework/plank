@@ -127,19 +127,73 @@ function handleBindDirective<T = unknown>(context: DirectiveContext<T>): Effect 
   }
 }
 
+// Registry for tracking removed elements and their restoration info
+const removedElements = new WeakMap<Element, {
+  parent: Element;
+  nextSibling: Node | null;
+  effects: Set<Effect>;
+}>();
+
+/**
+ * Restore element to DOM from removal registry
+ */
+function restoreElement(element: Element): void {
+  const restorationInfo = removedElements.get(element);
+  if (restorationInfo) {
+    const { parent, nextSibling, effects } = restorationInfo;
+
+    // Restore element to DOM
+    if (nextSibling) {
+      parent.insertBefore(element, nextSibling);
+    } else {
+      parent.appendChild(element);
+    }
+
+    // Re-register effects
+    for (const effectObj of effects) {
+      if (effectObj && typeof effectObj.stop === 'function') {
+        // Effects will be re-created by the directive system
+        effectObj.stop();
+      }
+    }
+
+    removedElements.delete(element);
+  }
+}
+
+/**
+ * Remove element and store restoration info
+ */
+function removeElementWithRestoration(element: Element): void {
+  const parent = element.parentNode as Element;
+  const nextSibling = element.nextSibling;
+
+  // Get current effects for this element
+  const effects = new Set<Effect>();
+  // Note: In a full implementation, we'd track effects per element
+
+  removedElements.set(element, {
+    parent,
+    nextSibling,
+    effects,
+  });
+
+  element.remove();
+}
+
 /**
  * Conditional directive (x:if, x:show)
  */
 function applyIf(element: Element, shouldShow: boolean): void {
   if (shouldShow) {
     if (!element.parentNode) {
-      // Element was removed, need to restore it
-      // This is complex and would need a reference to the original position
-      console.warn('x:if element restoration not fully implemented');
+      // Element was removed, restore it
+      restoreElement(element);
     }
   } else {
     if (element.parentNode) {
-      element.remove();
+      // Store restoration info before removing
+      removeElementWithRestoration(element);
     }
   }
 }

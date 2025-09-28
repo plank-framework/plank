@@ -37,7 +37,7 @@ export function bindText<T = unknown>(
 ): Effect {
   const { text = true, formatter } = options;
 
-  return effect(() => {
+  const effectObj = effect(() => {
     const value = signal();
     const displayValue = formatter ? formatter(value) : String(value ?? '');
 
@@ -47,6 +47,9 @@ export function bindText<T = unknown>(
       element.innerHTML = displayValue;
     }
   });
+
+  registerBinding(element, effectObj);
+  return effectObj;
 }
 
 /**
@@ -60,7 +63,7 @@ export function bindAttribute<T = unknown>(
 ): Effect {
   const { formatter } = options;
 
-  return effect(() => {
+  const effectObj = effect(() => {
     const value = signal();
     const displayValue = formatter ? formatter(value) : String(value ?? '');
 
@@ -70,6 +73,9 @@ export function bindAttribute<T = unknown>(
       element.setAttribute(attribute, displayValue);
     }
   });
+
+  registerBinding(element, effectObj);
+  return effectObj;
 }
 
 /**
@@ -83,7 +89,7 @@ export function bindProperty<T = unknown>(
 ): Effect {
   const { formatter } = options;
 
-  return effect(() => {
+  const effectObj = effect(() => {
     const value = signal();
     const displayValue = formatter ? formatter(value) : value;
 
@@ -94,6 +100,9 @@ export function bindProperty<T = unknown>(
       console.warn(`Failed to set property "${property}" on element:`, error);
     }
   });
+
+  registerBinding(element, effectObj);
+  return effectObj;
 }
 
 /**
@@ -107,7 +116,7 @@ export function bindClass<T = unknown>(
 ): Effect {
   const { formatter } = options;
 
-  return effect(() => {
+  const effectObj = effect(() => {
     const value = signal();
     const shouldHaveClass = formatter ? formatter(value) : Boolean(value);
 
@@ -117,6 +126,9 @@ export function bindClass<T = unknown>(
       element.classList.remove(className);
     }
   });
+
+  registerBinding(element, effectObj);
+  return effectObj;
 }
 
 /**
@@ -130,7 +142,7 @@ export function bindStyle<T = unknown>(
 ): Effect {
   const { formatter } = options;
 
-  return effect(() => {
+  const effectObj = effect(() => {
     const value = signal();
     const displayValue = formatter ? formatter(value) : String(value ?? '');
 
@@ -141,6 +153,9 @@ export function bindStyle<T = unknown>(
       console.warn(`Failed to set CSS property "${property}" on element style:`, error);
     }
   });
+
+  registerBinding(element, effectObj);
+  return effectObj;
 }
 
 /**
@@ -176,7 +191,7 @@ export function bindInputValue<T = unknown>(
   input.addEventListener('input', updateSignal);
   input.addEventListener('change', updateSignal);
 
-  return {
+  const effectObj = {
     stop: () => {
       updateInput.stop();
       input.removeEventListener('input', updateSignal);
@@ -184,6 +199,9 @@ export function bindInputValue<T = unknown>(
     },
     isActive: true,
   } as Effect;
+
+  registerBinding(input, effectObj);
+  return effectObj;
 }
 
 /**
@@ -218,13 +236,16 @@ export function bindCheckbox<T = unknown>(
 
   checkbox.addEventListener('change', updateSignal);
 
-  return {
+  const effectObj = {
     stop: () => {
       updateCheckbox.stop();
       checkbox.removeEventListener('change', updateSignal);
     },
     isActive: true,
   } as Effect;
+
+  registerBinding(checkbox, effectObj);
+  return effectObj;
 }
 
 /**
@@ -284,13 +305,16 @@ export function bindTwoWay<T = unknown>(
 
   element.addEventListener(event, updateSignal);
 
-  return {
+  const effectObj = {
     stop: () => {
       oneWay.stop();
       element.removeEventListener(event, updateSignal);
     },
     isActive: true,
   } as Effect;
+
+  registerBinding(element, effectObj);
+  return effectObj;
 }
 
 /**
@@ -328,11 +352,34 @@ export function bindMultiple(
   });
 }
 
+// Global registry for tracking bindings per element
+const elementBindings = new WeakMap<Element, Set<Effect>>();
+
+/**
+ * Register a binding effect for an element
+ */
+export function registerBinding(element: Element, effect: Effect): void {
+  if (!elementBindings.has(element)) {
+    elementBindings.set(element, new Set());
+  }
+  const bindings = elementBindings.get(element);
+  if (bindings) {
+    bindings.add(effect);
+  }
+}
+
 /**
  * Remove all bindings from an element
  */
-export function unbindElement(_element: Element): void {
-  // This would need to be implemented with a registry of bindings
-  // For now, this is a placeholder
-  console.warn('unbindElement not fully implemented yet');
+export function unbindElement(element: Element): void {
+  const bindings = elementBindings.get(element);
+  if (bindings) {
+    for (const effect of bindings) {
+      if (effect && typeof effect.stop === 'function') {
+        effect.stop();
+      }
+    }
+    bindings.clear();
+    elementBindings.delete(element);
+  }
 }

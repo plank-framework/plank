@@ -7,4 +7,5 @@ export { batch, computed, effect, signal } from '@plank/runtime-core';
 export * from './actions.js';
 export * from './bindings.js';
 export * from './directives.js';
+export * from './dom-ir.js';
 export * from './islands.js';

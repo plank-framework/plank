@@ -621,7 +621,7 @@ export class SSRRenderer {
     return `<script type="module">
       // Island hydration for Plank SSR
       import { hydrateIslands } from '${this.config.baseUrl}/@plank/runtime-dom';
-      
+
       // Hydrate islands when DOM is ready
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {

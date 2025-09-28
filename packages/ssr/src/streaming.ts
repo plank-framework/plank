@@ -133,18 +133,37 @@ export class StreamingResponse {
 /**
  * Generate HTML for progressive enhancement
  */
-export function generateEnhancementScript(): string {
+export function generateEnhancementScript(baseUrl = '/'): string {
   return `<script type="module">
     // Progressive enhancement for Plank
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('${baseUrl}sw.js').catch(() => {
+        // Service worker registration failed, continue without it
+      });
     }
 
     // Preload critical resources
     const link = document.createElement('link');
     link.rel = 'modulepreload';
-    link.href = '/@plank/runtime-dom';
+    link.href = '${baseUrl}@plank/runtime-dom';
     document.head.appendChild(link);
+
+    // Add error boundary for client-side errors
+    window.addEventListener('error', (event) => {
+      console.error('Plank Error:', event.error);
+      // Could send to error reporting service
+    });
+
+    // Add unhandled promise rejection handler
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Plank Unhandled Promise Rejection:', event.reason);
+      // Could send to error reporting service
+    });
+
+    // Add performance monitoring
+    if ('performance' in window && 'mark' in performance) {
+      performance.mark('plank-enhancement-start');
+    }
   </script>`;
 }
 
@@ -175,6 +194,8 @@ export function generateDocument(
     styles?: string[];
     scripts?: string[];
     preconnect?: string[];
+    baseUrl?: string;
+    enableProgressiveEnhancement?: boolean;
   } = {}
 ): string {
   const {
@@ -184,7 +205,13 @@ export function generateDocument(
     styles = [],
     scripts = [],
     preconnect = [],
+    baseUrl = '/',
+    enableProgressiveEnhancement = true,
   } = options;
+
+  const progressiveEnhancementScript = enableProgressiveEnhancement
+    ? generateEnhancementScript(baseUrl)
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="${lang}">
@@ -194,6 +221,7 @@ export function generateDocument(
   <title>${escapeHtml(title)}</title>
   ${preconnect.map((domain) => `<link rel="preconnect" href="${domain}">`).join('\n')}
   ${styles.map((href) => `<link rel="stylesheet" href="${href}">`).join('\n')}
+  ${progressiveEnhancementScript}
 </head>
 <body>
   ${content}
@@ -269,6 +297,57 @@ function generateSkeletonStyles(): string {
       100% { background-position: -200% 0; }
     }
   </style>`;
+}
+
+/**
+ * Generate streaming placeholder for progressive loading
+ */
+export function generateStreamingPlaceholder(
+  type: 'content' | 'island' | 'data' = 'content',
+  options: {
+    message?: string;
+    showSpinner?: boolean;
+    className?: string;
+  } = {}
+): string {
+  const {
+    message = 'Loading...',
+    showSpinner = true,
+    className = 'plank-streaming-placeholder',
+  } = options;
+
+  const spinner = showSpinner ? '<div class="plank-spinner"></div>' : '';
+
+  return `<div class="${className}" data-type="${type}">
+    ${spinner}
+    <span class="plank-message">${escapeHtml(message)}</span>
+  </div>`;
+}
+
+/**
+ * Generate streaming boundary markers for progressive enhancement
+ */
+export function generateStreamingBoundary(id: string, type: 'start' | 'end' = 'start'): string {
+  const marker = type === 'start' ? '<!--plank-stream-start:' : '<!--plank-stream-end:';
+  return `${marker}${id}-->`;
+}
+
+/**
+ * Generate error boundary for streaming failures
+ */
+export function generateErrorBoundary(error: string, fallback?: string): string {
+  const fallbackContent = fallback || 'An error occurred while loading this content.';
+
+  return `<div class="plank-error-boundary" data-error="${escapeHtml(error)}">
+    <div class="plank-error-content">
+      <h3>Loading Error</h3>
+      <p>${escapeHtml(fallbackContent)}</p>
+      <details>
+        <summary>Technical Details</summary>
+        <pre>${escapeHtml(error)}</pre>
+      </details>
+    </div>
+  </div>`;
 }
 
 /**

@@ -142,8 +142,12 @@ export class SSRRenderer {
       const streamingOptions = context.streaming || { enabled: this.config.streaming };
       const writer = new StreamingWriter(streamingOptions);
 
-      // Render template
-      const html = await this.renderTemplate(parseResult, context, writer);
+      // Render template with progressive enhancement
+      const html = await this.renderTemplateWithProgressiveEnhancement(
+        parseResult,
+        context,
+        writer
+      );
 
       const renderTime = performance.now() - startTime;
 
@@ -165,43 +169,65 @@ export class SSRRenderer {
 
       return result;
     } catch (error: unknown) {
+      // Enhanced error handling with fallback
+      return this.handleRenderError(error, templatePath, startTime);
+    }
+  }
+
+  /**
+   * Load template content from file system
+   */
+  private async loadTemplate(templatePath: string): Promise<string> {
+    try {
+      // In a real implementation, this would load from the configured template directory
+      // For now, we'll create a simple template that the parser can handle
+      const templateName = templatePath.split('/').pop()?.replace('.plk', '') || 'default';
+
+      return `<html>
+<head>
+  <title>Plank App - ${templateName}</title>
+</head>
+<body>
+  <h1>Welcome to Plank SSR</h1>
+  <p>Template: ${templatePath}</p>
+  <div class="content">
+    <p>This is server-rendered content from the ${templateName} template.</p>
+    <island src="./Counter.plk" client:idle>
+      <div class="loading">Loading counter...</div>
+    </island>
+  </div>
+</body>
+</html>`;
+    } catch (error) {
       throw new Error(
-        `SSR rendering failed: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to load template ${templatePath}: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
 
   /**
-   * Load template content
+   * Render parsed template to HTML with progressive enhancement
    */
-  private async loadTemplate(templatePath: string): Promise<string> {
-    // In a real implementation, this would load from file system
-    // For now, return a placeholder with valid HTML structure
-    return `<html>
-<head>
-  <title>Plank App</title>
-</head>
-<body>
-  <h1>Hello from Plank SSR!</h1>
-  <p>Template: ${templatePath}</p>
-</body>
-</html>`;
-  }
-
-  /**
-   * Render parsed template to HTML
-   */
-  private async renderTemplate(
+  private async renderTemplateWithProgressiveEnhancement(
     parseResult: ParseResult,
     context: SSRContext,
     writer: StreamingWriter
   ): Promise<string> {
+    // Add progressive enhancement script
+    writer.write(this.generateProgressiveEnhancementScript());
+
     // Render the AST to HTML
     if (parseResult.ast?.children) {
       for (const child of parseResult.ast.children) {
         this.renderNode(child, context, writer);
       }
     }
+
+    // Add hydration script for islands
+    if (parseResult.islands.length > 0) {
+      writer.write(this.generateIslandHydrationScript(parseResult.islands));
+    }
+
     return writer.getHtml();
   }
 
@@ -554,5 +580,113 @@ export class SSRRenderer {
         writer.close();
       },
     });
+  }
+
+  /**
+   * Generate progressive enhancement script
+   */
+  private generateProgressiveEnhancementScript(): string {
+    return `<script type="module">
+      // Progressive enhancement for Plank SSR
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('${this.config.baseUrl}/sw.js').catch(() => {
+          // Service worker registration failed, continue without it
+        });
+      }
+
+      // Preload critical resources
+      const link = document.createElement('link');
+      link.rel = 'modulepreload';
+      link.href = '${this.config.baseUrl}/@plank/runtime-dom';
+      document.head.appendChild(link);
+
+      // Add error boundary for client-side errors
+      window.addEventListener('error', (event) => {
+        console.error('Plank SSR Error:', event.error);
+        // Could send to error reporting service
+      });
+
+      // Add unhandled promise rejection handler
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('Plank SSR Unhandled Promise Rejection:', event.reason);
+        // Could send to error reporting service
+      });
+    </script>`;
+  }
+
+  /**
+   * Generate island hydration script
+   */
+  private generateIslandHydrationScript(_islands: string[]): string {
+    return `<script type="module">
+      // Island hydration for Plank SSR
+      import { hydrateIslands } from '${this.config.baseUrl}/@plank/runtime-dom';
+      
+      // Hydrate islands when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          hydrateIslands();
+        });
+      } else {
+        hydrateIslands();
+      }
+    </script>`;
+  }
+
+  /**
+   * Handle render errors with fallback
+   */
+  private handleRenderError(error: unknown, templatePath: string, startTime: number): SSRResult {
+    const renderTime = performance.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    // Generate fallback HTML
+    const fallbackHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Error - Plank App</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    .error { background: #fee; border: 1px solid #fcc; padding: 1rem; border-radius: 4px; }
+    .error h1 { color: #c33; margin-top: 0; }
+    .error pre { background: #f5f5f5; padding: 0.5rem; border-radius: 2px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <div class="error">
+    <h1>Server-Side Rendering Error</h1>
+    <p>Failed to render template: <code>${templatePath}</code></p>
+    <details>
+      <summary>Error Details</summary>
+      <pre>${this.escapeHtml(errorMessage)}</pre>
+    </details>
+    <p><small>Render time: ${renderTime.toFixed(2)}ms</small></p>
+  </div>
+</body>
+</html>`;
+
+    return {
+      html: fallbackHtml,
+      metadata: {
+        renderTime,
+        islandCount: 0,
+        actionCount: 0,
+        htmlSize: fallbackHtml.length,
+      },
+    };
+  }
+
+  /**
+   * Escape HTML special characters
+   */
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

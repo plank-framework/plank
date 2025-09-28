@@ -13,8 +13,11 @@ export { SSRRenderer, StreamingWriter } from './renderer.js';
 export {
   generateDocument,
   generateEnhancementScript,
+  generateErrorBoundary,
   generatePreconnectHints,
   generateSkeleton,
+  generateStreamingBoundary,
+  generateStreamingPlaceholder,
   generateViewportMeta,
   StreamingResponse,
 } from './streaming.js';

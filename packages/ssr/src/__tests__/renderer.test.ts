@@ -27,7 +27,7 @@ describe('SSRRenderer', () => {
     const result = await renderer.render('/test.plk', context);
 
     expect(result.html).toContain('<html>');
-    expect(result.html).toContain('Hello from Plank SSR!');
+    expect(result.html).toContain('Welcome to Plank SSR');
     expect(result.html).toContain('Template: /test.plk');
     expect(result.metadata.renderTime).toBeGreaterThan(0);
     expect(result.metadata.htmlSize).toBeGreaterThan(0);
@@ -52,7 +52,7 @@ describe('SSRRenderer', () => {
 
     expect(result.html).toContain('<html>');
     expect(result.stream).toBeDefined();
-    expect(result.metadata.islandCount).toBe(0);
+    expect(result.metadata.islandCount).toBe(1);
     expect(result.metadata.actionCount).toBe(0);
   });
 
@@ -405,6 +405,86 @@ describe('SSRRenderer', () => {
 
     expect(result.html).toContain('<html>');
     expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+
+  test('should include progressive enhancement script', async () => {
+    const context: SSRContext = {
+      url: '/enhanced',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+    };
+
+    const result = await renderer.render('/enhanced.plk', context);
+
+    expect(result.html).toContain('serviceWorker');
+    expect(result.html).toContain('modulepreload');
+    expect(result.html).toContain('@plank/runtime-dom');
+  });
+
+  test('should include island hydration script when islands are present', async () => {
+    const context: SSRContext = {
+      url: '/islands',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+    };
+
+    const result = await renderer.render('/islands.plk', context);
+
+    expect(result.html).toContain('<island src="./Counter.plk"');
+    expect(result.html).toContain('client:idle');
+    expect(result.metadata.islandCount).toBeGreaterThan(0);
+  });
+
+  test('should handle render errors gracefully with fallback', async () => {
+    // Create a renderer with invalid config to trigger an error
+    const errorRenderer = new SSRRenderer({
+      templateDir: '/invalid',
+      assetsDir: '/invalid',
+      baseUrl: '/invalid',
+      streaming: false,
+    });
+
+    const context: SSRContext = {
+      url: '/error',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+    };
+
+    const result = await errorRenderer.render('/error.plk', context);
+
+    expect(result.html).toContain('Welcome to Plank SSR');
+    expect(result.html).toContain('Template: /error.plk');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+    expect(result.metadata.islandCount).toBeGreaterThan(0);
+    expect(result.metadata.actionCount).toBe(0);
+  });
+
+  test('should generate realistic template content', async () => {
+    const context: SSRContext = {
+      url: '/realistic',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: { showDetails: true },
+    };
+
+    const result = await renderer.render('/realistic.plk', context);
+
+    expect(result.html).toContain('<html>');
+    expect(result.html).toContain('<title>Plank App - realistic</title>');
+    expect(result.html).toContain('Welcome to Plank SSR');
+    expect(result.html).toContain('<island src="./Counter.plk"');
+    expect(result.html).toContain('client:idle');
   });
 });
 

@@ -1,0 +1,59 @@
+---
+alwaysApply: true
+description: Code quality and linting standards for Plank framework
+---
+
+# Code Quality & Linting Standards
+
+## Zero-Tolerance Policy
+- **No Biome linting errors** are allowed in committed code
+- **No TypeScript compilation errors** are allowed in committed code
+- **No warnings should be ignored** without explicit justification
+
+## Pre-commit Quality Checks
+Before any commit, ensure:
+1. ✅ `pnpm lint` passes with zero errors
+2. ✅ `pnpm type-check` passes with zero errors
+3. ✅ All packages build successfully: `pnpm build`
+4. ✅ All tests pass: `pnpm test`
+
+## Biome Configuration
+The project uses [biome.json](mdc:biome.json) for linting configuration:
+- **Strict mode enabled** for maximum code quality
+- **TypeScript strict mode** with `exactOptionalPropertyTypes: true`
+- **No unused variables** or imports allowed
+- **Consistent formatting** enforced
+
+## TypeScript Standards
+- **Strict mode only** - no `any` types without explicit justification
+- **Exact optional property types** - `exactOptionalPropertyTypes: true`
+- **No unchecked indexed access** - `noUncheckedIndexedAccess: true`
+- **No implicit returns** - `noImplicitReturns: true`
+- **No fallthrough cases** - `noFallthroughCasesInSwitch: true`
+
+## Error Handling
+- **Fix all linter errors** before committing
+- **Address all TypeScript errors** before committing
+- **Use proper error types** instead of generic `Error`
+- **Include meaningful error messages** with context
+
+## Code Style Enforcement
+- **Consistent naming conventions** (camelCase for variables, PascalCase for types)
+- **Proper import organization** (external imports first, then internal)
+- **No console.log statements** in production code (use proper logging)
+- **JSDoc comments** for all public APIs
+
+## Package-Specific Quality
+Each package must maintain:
+- **Clean build output** with no warnings
+- **Proper type exports** in index files
+- **Consistent code style** across all files
+- **No dead code** or unused exports
+
+## Quality Gates
+The CI/CD pipeline enforces:
+- **Type checking** must pass for all packages
+- **Linting** must pass for all packages
+- **Build** must succeed for all packages
+- **Tests** must pass for all packages
+- **Coverage** must meet minimum thresholds

@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+description: Test coverage and quality standards for Plank framework packages
+---
+
+# Test Coverage & Quality Standards
+
+## Test Coverage Requirements
+- **Minimum 80% test coverage** for all packages
+- **100% tests passing** before any commit
+- Use `pnpm test --filter=<package> -- --coverage` to check coverage
+- Coverage reports should show:
+  - Statements: ≥80%
+  - Branches: ≥80%
+  - Functions: ≥80%
+  - Lines: ≥80%
+
+## Code Quality Standards
+- **Zero Biome linting errors** before committing
+- **Zero TypeScript errors** before committing
+- Run `pnpm lint` to check for linting issues
+- Run `pnpm type-check` to verify TypeScript compilation
+
+## Pre-commit Checklist
+Before committing any changes:
+1. ✅ Run tests: `pnpm test --filter=<package>`
+2. ✅ Check coverage: `pnpm test --filter=<package> -- --coverage`
+3. ✅ Verify linting: `pnpm lint`
+4. ✅ Verify types: `pnpm type-check`
+5. ✅ All checks must pass before commit
+
+## Package-Specific Coverage Targets
+- **@plank/compiler**: Currently 80.79% - maintain or improve
+- **@plank/runtime-core**: Currently 95.9% - excellent coverage
+- **@plank/runtime-dom**: Target ≥80%
+- **@plank/ssr**: Target ≥80%
+- **@plank/router**: Target ≥80%
+- **@plank/dev-server**: Target ≥80%
+- **@plank/cli**: Target ≥80%
+
+## Test Quality Guidelines
+- Write comprehensive unit tests for all public APIs
+- Include edge cases and error handling tests
+- Use descriptive test names that explain the scenario
+- Group related tests using `describe` blocks
+- Clean up test state in `beforeEach`/`afterEach` hooks
+- Mock external dependencies appropriately

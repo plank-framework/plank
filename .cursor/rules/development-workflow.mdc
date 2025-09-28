@@ -173,3 +173,55 @@ plank --telemetry=on|off
 - Performance data collection
 - Error reporting (with user consent)
 - Feature usage analytics
+
+## Quality Gates & Pre-commit Standards
+
+### Commit Standards
+- **Conventional commits** required - use format: `type(scope): description`
+- **No direct commits to main** - use feature branches
+- **All pre-commit checks must pass** before commit is accepted
+- **Meaningful commit messages** that explain the change and why
+
+### Pre-commit Hook Requirements
+The project uses [Husky pre-commit hook](mdc:.husky/pre-commit) that runs:
+1. **Type checking** - `pnpm type-check`
+2. **Linting** - `pnpm lint`
+3. **Build verification** - `pnpm build`
+4. **Test execution** - `pnpm test`
+
+### Quality Gates
+Before any code is committed:
+- ✅ **Zero TypeScript errors** - `pnpm type-check`
+- ✅ **Zero Biome linting errors** - `pnpm lint`
+- ✅ **All tests passing** - `pnpm test`
+- ✅ **Minimum 80% test coverage** - `pnpm test -- --coverage`
+- ✅ **All packages building** - `pnpm build`
+
+### Package Development Standards
+Each package in [packages/](mdc:packages/) must:
+- **Maintain >80% test coverage**
+- **Have comprehensive unit tests**
+- **Export clean public APIs**
+- **Follow TypeScript strict mode**
+- **Include proper JSDoc documentation**
+
+### Error Resolution Process
+When encountering errors:
+1. **Fix TypeScript errors first** - ensure type safety
+2. **Address Biome linting issues** - maintain code quality
+3. **Update tests if needed** - maintain coverage
+4. **Verify all checks pass** - ensure quality gates
+5. **Commit with conventional format** - maintain history
+
+### Development Commands
+- **Test specific package**: `pnpm test --filter=<package>`
+- **Check coverage**: `pnpm test --filter=<package> -- --coverage`
+- **Lint specific package**: `pnpm lint --filter=<package>`
+- **Type check specific package**: `pnpm type-check --filter=<package>`
+- **Build specific package**: `pnpm build --filter=<package>`
+
+### Branch Strategy
+- **main branch** - stable, production-ready code
+- **develop branch** - integration branch for active development
+- **feature branches** - individual feature development
+- **All changes** must go through pull requests with quality checks

@@ -35,11 +35,21 @@
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "jsdom": "^24.1.0",
+    "lint-staged": "^16.2.3",
     "turbo": "^1.13.4",
     "typescript": "^5.4.5",
     "vitest": "^3.2.4"
   },
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "biome check --write",
+      "biome format --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "biome format --write"
+    ]
+  }
 }

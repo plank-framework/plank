@@ -5,15 +5,19 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import {
   batch,
+  clearReactiveGraph,
   computed,
   derived,
+  deserializeReactiveGraph,
   effect,
   flushSync,
   fromPromise,
+  getSerializableValues,
   isComputed,
   isEffect,
   isSignal,
   memo,
+  serializeReactiveGraph,
   signal,
 } from '../signals.js';
 
@@ -21,6 +25,8 @@ describe('Plank Signals', () => {
   beforeEach(() => {
     // Clear any pending timers
     vi.clearAllTimers();
+    // Clear reactive graph for clean test state
+    clearReactiveGraph();
   });
 
   describe('signal', () => {
@@ -52,6 +58,21 @@ describe('Plank Signals', () => {
       expect(doubled()).toBe(0);
       count(5);
       expect(doubled()).toBe(10);
+    });
+
+    test('should have unique ID and serialization support', () => {
+      const count = signal(42);
+      const count2 = signal(24);
+
+      expect(count.id).toBeDefined();
+      expect(count2.id).toBeDefined();
+      expect(count.id).not.toBe(count2.id);
+      expect(count.isSerializable).toBe(true);
+    });
+
+    test('should support non-serializable signals', () => {
+      const count = signal(42, { serializable: false });
+      expect(count.isSerializable).toBe(false);
     });
   });
 
@@ -105,6 +126,17 @@ describe('Plank Signals', () => {
       expect(doubled.isDirty).toBe(true);
       doubled(); // Access to trigger recomputation
       expect(doubled.isDirty).toBe(false);
+    });
+
+    test('should have unique ID and serialization support', () => {
+      const count = signal(5);
+      const doubled = computed(() => count() * 2);
+      const tripled = computed(() => count() * 3);
+
+      expect(doubled.id).toBeDefined();
+      expect(tripled.id).toBeDefined();
+      expect(doubled.id).not.toBe(tripled.id);
+      expect(doubled.isSerializable).toBe(true);
     });
   });
 
@@ -190,6 +222,20 @@ describe('Plank Signals', () => {
       expect(stop.isActive).toBe(true);
       stop.stop();
       expect(stop.isActive).toBe(false);
+    });
+
+    test('should have unique ID', () => {
+      const count = signal(0);
+      const effect1 = effect(() => {
+        count();
+      });
+      const effect2 = effect(() => {
+        count();
+      });
+
+      expect(effect1.id).toBeDefined();
+      expect(effect2.id).toBeDefined();
+      expect(effect1.id).not.toBe(effect2.id);
     });
   });
 
@@ -333,6 +379,61 @@ describe('Plank Signals', () => {
       expect(result()).toBe(6);
       b(3);
       expect(result()).toBe(9);
+    });
+  });
+
+  describe('serialization', () => {
+    test('should serialize reactive graph', () => {
+      const count = signal(42);
+      computed(() => count() * 2);
+      computed(() => count() * 3);
+
+      const serialized = serializeReactiveGraph();
+      const data = JSON.parse(serialized);
+
+      expect(data.version).toBe('1.0');
+      expect(data.timestamp).toBeDefined();
+      expect(data.values).toHaveLength(3); // count, doubled, tripled
+
+      const signalData = data.values.find((v: { type: string; value: unknown }) => v.type === 'signal');
+      const computedData = data.values.filter((v: { type: string }) => v.type === 'computed');
+
+      expect(signalData.value).toBe(42);
+      expect(computedData).toHaveLength(2);
+    });
+
+    test('should deserialize reactive graph', () => {
+      const count = signal(42);
+      const serialized = serializeReactiveGraph();
+
+      clearReactiveGraph();
+      const restored = deserializeReactiveGraph(serialized);
+
+      expect(restored.size).toBe(1);
+      const restoredSignal = restored.get(count.id);
+      expect(restoredSignal).toBeDefined();
+    });
+
+    test('should get serializable values', () => {
+      const count = signal(42);
+      computed(() => count() * 2);
+      const nonSerializable = signal(24, { serializable: false });
+
+      const serializable = getSerializableValues();
+      expect(serializable.size).toBe(2); // count and doubled, not nonSerializable
+      expect(serializable.has(count.id)).toBe(true);
+      expect(serializable.has(nonSerializable.id)).toBe(false);
+    });
+
+    test('should clear reactive graph', () => {
+      signal(42);
+      computed(() => 42 * 2);
+
+      expect(getSerializableValues().size).toBe(2);
+
+      clearReactiveGraph();
+
+      expect(getSerializableValues().size).toBe(0);
     });
   });
 });

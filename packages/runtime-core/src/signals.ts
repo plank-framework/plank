@@ -1,6 +1,7 @@
 /**
  * @fileoverview Plank signals implementation
  * Fine-grained reactivity with dependency tracking and microtask scheduling
+ * Includes SSR serialization markers for resumability
  */
 
 // Base types for reactive values
@@ -12,6 +13,8 @@ export interface Signal<T> {
   readonly value: T;
   readonly dependencies: Set<Computed<unknown>>;
   readonly dependents: Set<ReactiveValue>;
+  readonly id: string;
+  readonly isSerializable: boolean;
 }
 
 export interface Computed<T> {
@@ -20,6 +23,8 @@ export interface Computed<T> {
   readonly dependencies: Set<ReactiveValue>;
   readonly dependents: Set<ReactiveValue>;
   readonly isDirty: boolean;
+  readonly id: string;
+  readonly isSerializable: boolean;
 }
 
 export interface Effect {
@@ -27,6 +32,7 @@ export interface Effect {
   stop(): void;
   readonly isActive: boolean;
   readonly dependencies: Set<Signal<unknown>>;
+  readonly id: string;
 }
 
 // Global scheduler for batched updates
@@ -144,6 +150,15 @@ const scheduler = new Scheduler();
 let activeComputed: Computed<unknown> | null = null;
 let activeEffect: Effect | null = null;
 
+// ID generation for serialization
+let nextId = 1;
+function generateId(): string {
+  return `reactive_${nextId++}`;
+}
+
+// Global registry for serializable reactive values
+const serializableRegistry = new Map<string, ReactiveValue>();
+
 /**
  * Mark a computed as dirty and notify its dependents
  */
@@ -172,10 +187,12 @@ function markComputedDirty(computed: Computed<unknown>): void {
 /**
  * Create a reactive signal
  */
-export function signal<T>(initialValue: T): Signal<T> {
+export function signal<T>(initialValue: T, options?: { serializable?: boolean }): Signal<T> {
   const dependencies = new Set<Computed<unknown>>();
   const dependents = new Set<ReactiveValue>();
   let value = initialValue;
+  const id = generateId();
+  const isSerializable = options?.serializable ?? true;
 
   const signalFn = (newValue?: T) => {
     if (newValue !== undefined) {
@@ -223,7 +240,20 @@ export function signal<T>(initialValue: T): Signal<T> {
       get: () => dependents,
       configurable: true,
     },
+    id: {
+      get: () => id,
+      configurable: true,
+    },
+    isSerializable: {
+      get: () => isSerializable,
+      configurable: true,
+    },
   });
+
+  // Register for serialization if serializable
+  if (isSerializable) {
+    serializableRegistry.set(id, signalFn as Signal<unknown>);
+  }
 
   return signalFn as Signal<T>;
 }
@@ -231,11 +261,13 @@ export function signal<T>(initialValue: T): Signal<T> {
 /**
  * Create a computed value that depends on signals
  */
-export function computed<T>(fn: () => T): Computed<T> {
+export function computed<T>(fn: () => T, options?: { serializable?: boolean }): Computed<T> {
   const dependencies = new Set<ReactiveValue>();
   const dependents = new Set<ReactiveValue>();
   let value: T;
   let isDirty = true;
+  const id = generateId();
+  const isSerializable = options?.serializable ?? true;
 
   const trackDependencies = () => {
     if (activeComputed) {
@@ -320,7 +352,20 @@ export function computed<T>(fn: () => T): Computed<T> {
       },
       configurable: true,
     },
+    id: {
+      get: () => id,
+      configurable: true,
+    },
+    isSerializable: {
+      get: () => isSerializable,
+      configurable: true,
+    },
   });
+
+  // Register for serialization if serializable
+  if (isSerializable) {
+    serializableRegistry.set(id, computedFn as Computed<unknown>);
+  }
 
   // Initial computation
   computedFn();
@@ -335,6 +380,7 @@ export function effect(fn: () => void | (() => void)): Effect {
   const dependencies = new Set<Signal<unknown>>();
   let cleanup: (() => void) | undefined;
   let isActive = true;
+  const id = generateId();
 
   const effectFn = () => {
     if (!isActive) return;
@@ -370,6 +416,10 @@ export function effect(fn: () => void | (() => void)): Effect {
     },
     dependencies: {
       get: () => dependencies,
+      configurable: true,
+    },
+    id: {
+      get: () => id,
       configurable: true,
     },
   });
@@ -478,4 +528,104 @@ export function isEffect(value: unknown): value is Effect {
  */
 export function flushSync(): void {
   scheduler.flushSync();
+}
+
+/**
+ * Extract dependencies from a reactive value
+ */
+function extractDependencies(reactive: ReactiveValue): string[] {
+  const dependencies: string[] = [];
+
+  if ('dependencies' in reactive) {
+    for (const dep of reactive.dependencies) {
+      if ('id' in dep) {
+        dependencies.push(dep.id);
+      }
+    }
+  }
+
+  return dependencies;
+}
+
+/**
+ * Serialize a single reactive value
+ */
+function serializeReactiveValue(id: string, reactive: ReactiveValue): {
+  id: string;
+  type: 'signal' | 'computed';
+  value: unknown;
+  dependencies: string[];
+} {
+  return {
+    id,
+    type: 'isDirty' in reactive ? 'computed' : 'signal',
+    value: 'value' in reactive ? reactive.value : undefined,
+    dependencies: extractDependencies(reactive),
+  };
+}
+
+/**
+ * Serialize the reactive graph for SSR resumability
+ */
+export function serializeReactiveGraph(): string {
+  const serializableValues: Array<{
+    id: string;
+    type: 'signal' | 'computed';
+    value: unknown;
+    dependencies: string[];
+  }> = [];
+
+  for (const [id, reactive] of serializableRegistry) {
+    if ('isSerializable' in reactive && reactive.isSerializable) {
+      serializableValues.push(serializeReactiveValue(id, reactive));
+    }
+  }
+
+  return JSON.stringify({
+    version: '1.0',
+    timestamp: Date.now(),
+    values: serializableValues,
+  });
+}
+
+/**
+ * Deserialize the reactive graph from SSR
+ */
+export function deserializeReactiveGraph(serialized: string): Map<string, ReactiveValue> {
+  const data = JSON.parse(serialized);
+  const restored = new Map<string, ReactiveValue>();
+
+  // Create signals and computeds from serialized data
+  for (const item of data.values) {
+    if (item.type === 'signal') {
+      const sig = signal(item.value, { serializable: true });
+      restored.set(item.id, sig);
+    }
+    // Note: Computeds would need their computation function to be restored
+    // This is a simplified version - in practice, you'd need to store the computation
+  }
+
+  return restored;
+}
+
+/**
+ * Clear all reactive values (for cleanup and memory leak prevention)
+ */
+export function clearReactiveGraph(): void {
+  // Clear the registry
+  serializableRegistry.clear();
+
+  // Reset ID counter
+  nextId = 1;
+
+  // Clear active tracking
+  activeComputed = null;
+  activeEffect = null;
+}
+
+/**
+ * Get all serializable reactive values
+ */
+export function getSerializableValues(): Map<string, ReactiveValue> {
+  return new Map(serializableRegistry);
 }

@@ -186,4 +186,85 @@ describe('Route Configuration', () => {
     const noMatch = findRouteByPath(routes, '/nonexistent');
     expect(noMatch).toBeNull();
   });
+
+  test('should build nested layout configuration', () => {
+    const files: RouteFileInfo[] = [
+      {
+        type: 'layout',
+        path: '/app/routes/layout.plk',
+        routePath: '/',
+        name: 'layout',
+        isDynamic: false,
+        isCatchAll: false,
+        params: [],
+      },
+      {
+        type: 'layout',
+        path: '/app/routes/users/layout.plk',
+        routePath: '/users',
+        name: 'layout',
+        isDynamic: false,
+        isCatchAll: false,
+        params: [],
+      },
+    ];
+
+    const layouts = buildLayoutConfig(files);
+
+    expect(layouts).toHaveLength(2);
+    expect(layouts[0]?.isRoot).toBe(true);
+    expect(layouts[1]?.isRoot).toBe(false);
+  });
+
+  test('should handle catch-all routes', () => {
+    const routes = [
+      {
+        path: '/posts/[...slug]',
+        filePath: '/app/routes/posts/[...slug].plk',
+        params: ['...slug'],
+        isDynamic: true,
+        isCatchAll: true,
+        layoutPath: undefined,
+        pagePath: '/app/routes/posts/[...slug].plk',
+        methods: ['GET'],
+        meta: {
+          indexable: true,
+          priority: 0.5,
+          changefreq: 'monthly' as const,
+        },
+      },
+    ];
+
+    const catchAllMatch = findRouteByPath(routes, '/posts/hello/world');
+    expect(catchAllMatch?.path).toBe('/posts/[...slug]');
+
+    const noMatch = findRouteByPath(routes, '/posts');
+    expect(noMatch).toBeNull();
+  });
+
+  test('should handle optional parameters', () => {
+    const routes = [
+      {
+        path: '/users/[[id]]',
+        filePath: '/app/routes/users/[[id]].plk',
+        params: ['?id'],
+        isDynamic: true,
+        isCatchAll: false,
+        layoutPath: undefined,
+        pagePath: '/app/routes/users/[[id]].plk',
+        methods: ['GET'],
+        meta: {
+          indexable: true,
+          priority: 0.5,
+          changefreq: 'monthly' as const,
+        },
+      },
+    ];
+
+    const withParam = findRouteByPath(routes, '/users/123');
+    expect(withParam?.path).toBe('/users/[[id]]');
+
+    const withoutParam = findRouteByPath(routes, '/users');
+    expect(withoutParam?.path).toBe('/users/[[id]]');
+  });
 });

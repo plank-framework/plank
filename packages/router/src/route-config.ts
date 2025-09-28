@@ -147,11 +147,13 @@ function formatTitle(fileName: string): string {
 }
 
 /**
- * Build layout configuration from files
+ * Build layout configuration from files with nested layout support
  */
 export function buildLayoutConfig(files: RouteFileInfo[]): LayoutConfig[] {
   const layouts: LayoutConfig[] = [];
+  const layoutMap = new Map<string, LayoutConfig>();
 
+  // First pass: create all layouts
   for (const file of files) {
     if (file.type === 'layout') {
       const layoutConfig: LayoutConfig = {
@@ -162,10 +164,43 @@ export function buildLayoutConfig(files: RouteFileInfo[]): LayoutConfig[] {
       };
 
       layouts.push(layoutConfig);
+      layoutMap.set(file.routePath, layoutConfig);
+    }
+  }
+
+  // Second pass: establish parent-child relationships for nested layouts
+  for (const layout of layouts) {
+    if (!layout.isRoot) {
+      const parentPath = findParentLayoutPath(layout.filePath, layoutMap);
+      if (parentPath) {
+        layout.parent = parentPath;
+      }
     }
   }
 
   return layouts;
+}
+
+/**
+ * Find parent layout path for nested layouts
+ */
+function findParentLayoutPath(
+  layoutFilePath: string,
+  layoutMap: Map<string, LayoutConfig>
+): string | undefined {
+  const pathSegments = layoutFilePath.split('/');
+
+  // Walk up the directory tree to find the nearest parent layout
+  for (let i = pathSegments.length - 2; i >= 0; i--) {
+    const parentPath = pathSegments.slice(0, i + 1).join('/');
+    const parentRoutePath = parentPath.replace(/^.*\/routes/, '') || '/';
+
+    if (layoutMap.has(parentRoutePath)) {
+      return parentRoutePath;
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -251,37 +286,102 @@ export function findRouteByPath(routes: RouteConfig[], path: string): RouteConfi
 }
 
 /**
- * Check if a route matches a given path
+ * Check if a route matches a given path with enhanced dynamic route support
  */
 function matchesRoutePath(route: RouteConfig, path: string): boolean {
   const routeSegments = route.path.split('/').filter(Boolean);
   const pathSegments = path.split('/').filter(Boolean);
 
+  // Handle catch-all routes
+  if (route.isCatchAll) {
+    return matchesCatchAllRoute(routeSegments, pathSegments);
+  }
+
+  // Handle optional parameters
   if (routeSegments.length !== pathSegments.length) {
+    return matchesOptionalRoute(routeSegments, pathSegments);
+  }
+
+  return matchesRouteSegments(routeSegments, pathSegments);
+}
+
+/**
+ * Check if catch-all route matches
+ */
+function matchesCatchAllRoute(routeSegments: string[], pathSegments: string[]): boolean {
+  const catchAllIndex = routeSegments.findIndex(seg => seg.startsWith('[...'));
+  if (catchAllIndex === -1) {
     return false;
   }
 
+  // Check if all segments before catch-all match
+  for (let i = 0; i < catchAllIndex; i++) {
+    const routeSegment = routeSegments[i];
+    const pathSegment = pathSegments[i];
+    if (!routeSegment || !pathSegment || !matchesRouteSegment(routeSegment, pathSegment)) {
+      return false;
+    }
+  }
+
+  // Catch-all requires at least one segment after the catch-all position
+  return pathSegments.length > catchAllIndex;
+}
+
+/**
+ * Check if optional route matches
+ */
+function matchesOptionalRoute(routeSegments: string[], pathSegments: string[]): boolean {
+  // Check if the difference is due to optional parameters
+  if (Math.abs(routeSegments.length - pathSegments.length) !== 1) {
+    return false;
+  }
+
+  const longer = routeSegments.length > pathSegments.length ? routeSegments : pathSegments;
+  const shorter = routeSegments.length > pathSegments.length ? pathSegments : routeSegments;
+
+  // Check if the extra segment is optional
+  const extraSegment = longer[longer.length - 1];
+  if (!extraSegment || !extraSegment.startsWith('[[') || !extraSegment.endsWith(']]')) {
+    return false;
+  }
+
+  // Remove the optional segment and check the rest
+  const adjustedRoute = longer.slice(0, -1);
+  return matchesRouteSegments(adjustedRoute, shorter);
+}
+
+/**
+ * Check if route segments match path segments
+ */
+function matchesRouteSegments(routeSegments: string[], pathSegments: string[]): boolean {
   for (let i = 0; i < routeSegments.length; i++) {
     const routeSegment = routeSegments[i];
     const pathSegment = pathSegments[i];
-
-    if (!routeSegment || !pathSegment) {
+    if (!routeSegment || !pathSegment || !matchesRouteSegment(routeSegment, pathSegment)) {
       return false;
     }
+  }
+  return true;
+}
 
-    // Exact match
-    if (routeSegment === pathSegment) {
-      continue;
-    }
-
-    // Dynamic segment
-    if (routeSegment.startsWith('[') && routeSegment.endsWith(']')) {
-      continue;
-    }
-
-    // No match
-    return false;
+/**
+ * Check if a single route segment matches a path segment
+ */
+function matchesRouteSegment(routeSegment: string, pathSegment: string | undefined): boolean {
+  if (!pathSegment) {
+    // Handle optional parameters
+    return routeSegment.startsWith('[[') && routeSegment.endsWith(']]');
   }
 
-  return true;
+  // Exact match
+  if (routeSegment === pathSegment) {
+    return true;
+  }
+
+  // Dynamic segment patterns
+  if (routeSegment.startsWith('[') && routeSegment.endsWith(']')) {
+    return true; // Any value matches dynamic segments
+  }
+
+  return false;
 }

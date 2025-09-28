@@ -203,7 +203,7 @@ export class FileBasedRouter {
   }
 
   /**
-   * Extract parameters from path
+   * Extract parameters from path with enhanced dynamic route support
    */
   private extractParams(route: RouteConfig, path: string): Record<string, string> {
     const params: Record<string, string> = {};
@@ -214,6 +214,60 @@ export class FileBasedRouter {
 
     const routeSegments = route.path.split('/').filter(Boolean);
     const pathSegments = path.split('/').filter(Boolean);
+
+    // Handle catch-all routes
+    if (route.isCatchAll) {
+      return this.extractCatchAllParams(routeSegments, pathSegments);
+    }
+
+    // Handle regular dynamic routes
+    return this.extractRegularParams(routeSegments, pathSegments);
+  }
+
+  /**
+   * Extract parameters from catch-all routes
+   */
+  private extractCatchAllParams(routeSegments: string[], pathSegments: string[]): Record<string, string> {
+    const params: Record<string, string> = {};
+    const catchAllIndex = routeSegments.findIndex(seg => seg.startsWith('[...'));
+
+    if (catchAllIndex === -1) {
+      return params;
+    }
+
+    // Extract parameters before catch-all
+    for (let i = 0; i < catchAllIndex; i++) {
+      const routeSegment = routeSegments[i];
+      const pathSegment = pathSegments[i];
+      if (routeSegment && pathSegment) {
+        const extracted = this.extractParameterFromSegment(
+          routeSegment,
+          pathSegment,
+          pathSegments,
+          i
+        );
+        if (extracted) {
+          Object.assign(params, extracted);
+        }
+      }
+    }
+
+    // Extract catch-all parameter
+    const catchAllSegment = routeSegments[catchAllIndex];
+    if (catchAllSegment) {
+      const catchAllParam = catchAllSegment.slice(4, -1); // Remove [... and ]
+      const catchAllValue = pathSegments.slice(catchAllIndex).join('/');
+      params[catchAllParam] = catchAllValue;
+    }
+
+    return params;
+  }
+
+  /**
+   * Extract parameters from regular dynamic routes
+   */
+  private extractRegularParams(routeSegments: string[], pathSegments: string[]): Record<string, string> {
+    const params: Record<string, string> = {};
 
     for (let i = 0; i < routeSegments.length; i++) {
       const routeSegment = routeSegments[i];
@@ -232,9 +286,6 @@ export class FileBasedRouter {
         );
         if (extracted) {
           Object.assign(params, extracted);
-          if (extracted.isCatchAll) {
-            break;
-          }
         }
       }
     }
@@ -301,6 +352,57 @@ export class FileBasedRouter {
     }
 
     return query;
+  }
+
+  /**
+   * Get layout hierarchy for a route
+   */
+  getLayoutHierarchy(routePath: string): LayoutConfig[] {
+    const route = this.getRoute(routePath);
+    if (!route || !route.layoutPath) {
+      return [];
+    }
+
+    const hierarchy: LayoutConfig[] = [];
+    const layoutMap = new Map(this.layouts.map(l => [l.filePath, l]));
+
+    let currentLayout = layoutMap.get(route.layoutPath);
+    while (currentLayout) {
+      hierarchy.unshift(currentLayout);
+      if (currentLayout.parent) {
+        currentLayout = layoutMap.get(currentLayout.parent);
+      } else {
+        break;
+      }
+    }
+
+    return hierarchy;
+  }
+
+  /**
+   * Get all routes that use a specific layout
+   */
+  getRoutesByLayout(layoutPath: string): RouteConfig[] {
+    return this.routes.filter(route => route.layoutPath === layoutPath);
+  }
+
+  /**
+   * Get route statistics
+   */
+  getRouteStats(): {
+    total: number;
+    static: number;
+    dynamic: number;
+    catchAll: number;
+    withLayouts: number;
+  } {
+    return {
+      total: this.routes.length,
+      static: this.routes.filter(r => !r.isDynamic).length,
+      dynamic: this.routes.filter(r => r.isDynamic && !r.isCatchAll).length,
+      catchAll: this.routes.filter(r => r.isCatchAll).length,
+      withLayouts: this.routes.filter(r => r.layoutPath).length,
+    };
   }
 
   /**

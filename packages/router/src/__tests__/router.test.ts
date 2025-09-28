@@ -68,4 +68,68 @@ describe('FileBasedRouter', () => {
     expect(router.getRoutes()).toHaveLength(0);
     expect(router.getLayouts()).toHaveLength(0);
   });
+
+  test('should get layout hierarchy', async () => {
+    const { readdir } = await import('node:fs/promises');
+    const mockReaddir = vi.mocked(readdir);
+    mockReaddir.mockResolvedValueOnce([]);
+
+    const router = new FileBasedRouter(config);
+    await router.initialize();
+
+    const hierarchy = router.getLayoutHierarchy('/users');
+    expect(hierarchy).toHaveLength(0);
+  });
+
+  test('should get routes by layout', async () => {
+    const { readdir } = await import('node:fs/promises');
+    const mockReaddir = vi.mocked(readdir);
+    mockReaddir.mockResolvedValueOnce([]);
+
+    const router = new FileBasedRouter(config);
+    await router.initialize();
+
+    const routes = router.getRoutesByLayout('/app/layouts/main.plk');
+    expect(routes).toHaveLength(0);
+  });
+
+  test('should get route statistics', async () => {
+    const { readdir } = await import('node:fs/promises');
+    const mockReaddir = vi.mocked(readdir);
+    mockReaddir.mockResolvedValueOnce([]);
+
+    const router = new FileBasedRouter(config);
+    await router.initialize();
+
+    const stats = router.getRouteStats();
+    expect(stats.total).toBe(0);
+    expect(stats.static).toBe(0);
+    expect(stats.dynamic).toBe(0);
+    expect(stats.catchAll).toBe(0);
+    expect(stats.withLayouts).toBe(0);
+  });
+
+  test('should match routes with parameters', async () => {
+    const { readdir } = await import('node:fs/promises');
+    const mockReaddir = vi.mocked(readdir);
+    mockReaddir.mockResolvedValueOnce([]);
+
+    const router = new FileBasedRouter(config);
+    await router.initialize();
+
+    const match = router.match('/users/123');
+    expect(match).toBeNull(); // No routes configured
+  });
+
+  test('should handle catch-all route matching', async () => {
+    const { readdir } = await import('node:fs/promises');
+    const mockReaddir = vi.mocked(readdir);
+    mockReaddir.mockResolvedValueOnce([]);
+
+    const router = new FileBasedRouter(config);
+    await router.initialize();
+
+    const match = router.match('/posts/hello/world');
+    expect(match).toBeNull(); // No routes configured
+  });
 });

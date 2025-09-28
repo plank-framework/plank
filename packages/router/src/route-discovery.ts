@@ -254,8 +254,8 @@ export function validateRoutePath(routePath: string): boolean {
  * Normalize route path
  */
 export function normalizeRoutePath(routePath: string): string {
-  // Remove leading/trailing slashes
-  let normalized = routePath.replace(/^\/+|\/+$/g, '');
+  // Remove leading/trailing slashes and collapse multiple slashes
+  let normalized = routePath.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
 
   // Add leading slash
   if (normalized && !normalized.startsWith('/')) {
@@ -280,28 +280,65 @@ export function matchesRoutePattern(routePath: string, pattern: string): boolean
   // Handle catch-all patterns
   const catchAllIndex = patternSegments.findIndex((seg) => DYNAMIC_PATTERNS.catchAll.test(seg));
   if (catchAllIndex !== -1) {
-    // For catch-all, check if all segments before it match
-    for (let i = 0; i < catchAllIndex; i++) {
-      const patternSegment = patternSegments[i];
-      if (!patternSegment || !matchesSegment(routeSegments[i], patternSegment)) {
-        return false;
-      }
-    }
-    // Catch-all matches the rest
-    return routeSegments.length >= catchAllIndex;
+    return matchesCatchAllPattern(routeSegments, patternSegments, catchAllIndex);
   }
 
+  // Handle optional parameters
   if (routeSegments.length !== patternSegments.length) {
+    return matchesOptionalPattern(routeSegments, patternSegments);
+  }
+
+  return matchesRouteSegments(routeSegments, patternSegments);
+}
+
+/**
+ * Check if catch-all pattern matches
+ */
+function matchesCatchAllPattern(routeSegments: string[], patternSegments: string[], catchAllIndex: number): boolean {
+  // For catch-all, check if all segments before it match
+  for (let i = 0; i < catchAllIndex; i++) {
+    const patternSegment = patternSegments[i];
+    if (!patternSegment || !matchesSegment(routeSegments[i], patternSegment)) {
+      return false;
+    }
+  }
+  // Catch-all requires at least one segment after the catch-all position
+  return routeSegments.length > catchAllIndex;
+}
+
+/**
+ * Check if optional pattern matches
+ */
+function matchesOptionalPattern(routeSegments: string[], patternSegments: string[]): boolean {
+  // Check if the difference is due to optional parameters
+  if (Math.abs(routeSegments.length - patternSegments.length) !== 1) {
     return false;
   }
 
+  const longer = routeSegments.length > patternSegments.length ? routeSegments : patternSegments;
+  const shorter = routeSegments.length > patternSegments.length ? patternSegments : routeSegments;
+
+  // Check if the extra segment is optional
+  const extraSegment = longer[longer.length - 1];
+  if (!extraSegment || !DYNAMIC_PATTERNS.optional.test(extraSegment)) {
+    return false;
+  }
+
+  // Remove the optional segment and check the rest
+  const adjustedPattern = longer.slice(0, -1);
+  return matchesRouteSegments(adjustedPattern, shorter);
+}
+
+/**
+ * Check if route segments match pattern segments
+ */
+function matchesRouteSegments(routeSegments: string[], patternSegments: string[]): boolean {
   for (let i = 0; i < routeSegments.length; i++) {
     const patternSegment = patternSegments[i];
     if (!patternSegment || !matchesSegment(routeSegments[i], patternSegment)) {
       return false;
     }
   }
-
   return true;
 }
 

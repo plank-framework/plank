@@ -58,4 +58,36 @@ describe('Route Discovery', () => {
     expect(matchesRoutePattern('/users/123/profile', '/users/[id]/profile')).toBe(true);
     expect(matchesRoutePattern('/users/123/456', '/users/[...slug]')).toBe(true);
   });
+
+  test('should handle complex route patterns', () => {
+    // Catch-all routes
+    expect(matchesRoutePattern('/posts/hello/world', '/posts/[...slug]')).toBe(true);
+    expect(matchesRoutePattern('/posts', '/posts/[...slug]')).toBe(false);
+
+    // Optional parameters
+    expect(matchesRoutePattern('/users/123', '/users/[[id]]')).toBe(true);
+    expect(matchesRoutePattern('/users', '/users/[[id]]')).toBe(true);
+
+    // Mixed patterns
+    expect(matchesRoutePattern('/api/v1/users/123', '/api/[version]/users/[id]')).toBe(true);
+  });
+
+  test('should validate complex route paths', () => {
+    // Valid complex routes
+    expect(validateRoutePath('/users/[id]/posts/[...slug]')).toBe(true);
+    expect(validateRoutePath('/api/[[version]]/users')).toBe(true);
+    expect(validateRoutePath('/posts/[...slug]/[[id]]')).toBe(true);
+
+    // Invalid complex routes
+    expect(validateRoutePath('/users/[]')).toBe(false); // Empty brackets
+    expect(validateRoutePath('/users/[[id]]]')).toBe(false); // Nested brackets
+    expect(validateRoutePath('/users/[id]]')).toBe(false); // Unmatched brackets
+  });
+
+  test('should normalize complex route paths', () => {
+    expect(normalizeRoutePath('/users/[id]/posts')).toBe('/users/[id]/posts');
+    expect(normalizeRoutePath('users/[id]/posts/')).toBe('/users/[id]/posts');
+    expect(normalizeRoutePath('//users//[id]//posts//')).toBe('/users/[id]/posts');
+    expect(normalizeRoutePath('')).toBe('/');
+  });
 });

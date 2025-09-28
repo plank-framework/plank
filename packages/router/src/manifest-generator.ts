@@ -39,7 +39,7 @@ export async function generateRouteManifest(
 }
 
 /**
- * Build manifest entry from route config
+ * Build manifest entry from route config with enhanced layout information
  */
 function buildManifestEntry(route: RouteConfig): RouteManifestEntry {
   return {
@@ -50,7 +50,11 @@ function buildManifestEntry(route: RouteConfig): RouteManifestEntry {
     catchAll: route.isCatchAll,
     layout: route.layoutPath,
     methods: route.methods,
-    meta: route.meta,
+    meta: {
+      ...route.meta,
+      // Add layout hierarchy information
+      layoutChain: route.layoutPath ? [route.layoutPath] : [],
+    },
   };
 }
 

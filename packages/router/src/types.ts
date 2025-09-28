@@ -44,6 +44,8 @@ export interface RouteMeta {
   priority?: number;
   /** Route change frequency */
   changefreq?: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
+  /** Layout chain for nested layouts */
+  layoutChain?: string[];
 }
 
 /**

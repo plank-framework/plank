@@ -83,7 +83,7 @@ describe('Manifest Generation', () => {
           meta: {
             indexable: true,
             priority: 0.5,
-            changefreq: 'monthly',
+            changefreq: 'monthly' as const,
           },
         },
         {
@@ -97,7 +97,7 @@ describe('Manifest Generation', () => {
           meta: {
             indexable: true,
             priority: 0.5,
-            changefreq: 'monthly',
+            changefreq: 'monthly' as const,
           },
         },
       ],
@@ -129,7 +129,7 @@ describe('Manifest Generation', () => {
           meta: {
             indexable: true,
             priority: 0.5,
-            changefreq: 'monthly',
+            changefreq: 'monthly' as const,
           },
         },
       ],
@@ -160,7 +160,7 @@ describe('Manifest Generation', () => {
           meta: {
             indexable: true,
             priority: 0.5,
-            changefreq: 'monthly',
+            changefreq: 'monthly' as const,
           },
         },
         {
@@ -174,7 +174,7 @@ describe('Manifest Generation', () => {
           meta: {
             indexable: true,
             priority: 0.5,
-            changefreq: 'monthly',
+            changefreq: 'monthly' as const,
           },
         },
         {
@@ -188,7 +188,7 @@ describe('Manifest Generation', () => {
           meta: {
             indexable: true,
             priority: 0.5,
-            changefreq: 'monthly',
+            changefreq: 'monthly' as const,
           },
         },
       ],
@@ -221,7 +221,7 @@ describe('Manifest Generation', () => {
           meta: {
             indexable: true,
             priority: 0.5,
-            changefreq: 'monthly',
+            changefreq: 'monthly' as const,
           },
         },
       ],
@@ -244,5 +244,165 @@ describe('Manifest Generation', () => {
 
     const invalidErrors = validateManifest(invalidManifest);
     expect(invalidErrors.length).toBeGreaterThan(0);
+  });
+
+  test('should generate manifest with nested layouts', async () => {
+    const routes: RouteConfig[] = [
+      {
+        path: '/users',
+        filePath: '/app/routes/users.plk',
+        params: [],
+        isDynamic: false,
+        isCatchAll: false,
+        layoutPath: '/app/routes/users/layout.plk',
+        pagePath: '/app/routes/users.plk',
+        methods: ['GET'],
+        meta: {
+          indexable: true,
+          priority: 0.5,
+          changefreq: 'monthly',
+        },
+      },
+    ];
+
+    const layouts: LayoutConfig[] = [
+      {
+        filePath: '/app/routes/layout.plk',
+        name: 'layout',
+        isRoot: true,
+        meta: {
+          title: 'Root Layout',
+          meta: {},
+          stylesheets: [],
+          scripts: [],
+        },
+      },
+      {
+        filePath: '/app/routes/users/layout.plk',
+        name: 'layout',
+        isRoot: false,
+        parent: '/',
+        meta: {
+          title: 'Users Layout',
+          meta: {},
+          stylesheets: [],
+          scripts: [],
+        },
+      },
+    ];
+
+    const manifest = await generateRouteManifest(routes, layouts, '/tmp/manifest.json');
+
+    expect(manifest.routes).toHaveLength(1);
+    expect(manifest.layouts).toHaveProperty('layout');
+    expect(manifest.rootLayout).toBe('/app/routes/layout.plk');
+    expect(manifest.routes[0]?.meta.layoutChain).toEqual(['/app/routes/users/layout.plk']);
+  });
+
+  test('should generate sitemap with complex routes', () => {
+    const manifest = {
+      routes: [
+        {
+          path: '/',
+          file: '/app/routes/index.plk',
+          params: [],
+          dynamic: false,
+          catchAll: false,
+          layout: undefined,
+          methods: ['GET'],
+          meta: {
+            indexable: true,
+            priority: 0.8,
+            changefreq: 'daily' as const,
+          },
+        },
+        {
+          path: '/users/[id]',
+          file: '/app/routes/users/[id].plk',
+          params: ['id'],
+          dynamic: true,
+          catchAll: false,
+          layout: undefined,
+          methods: ['GET'],
+          meta: {
+            indexable: false,
+            priority: 0.5,
+            changefreq: 'monthly' as const,
+          },
+        },
+        {
+          path: '/posts/[...slug]',
+          file: '/app/routes/posts/[...slug].plk',
+          params: ['...slug'],
+          dynamic: true,
+          catchAll: true,
+          layout: undefined,
+          methods: ['GET'],
+          meta: {
+            indexable: false,
+            priority: 0.3,
+            changefreq: 'weekly' as const,
+          },
+        },
+      ],
+      layouts: {},
+      rootLayout: undefined,
+      generatedAt: '2024-01-01T00:00:00.000Z',
+      version: '1.0.0',
+    };
+
+    const sitemap = generateSitemap(manifest, 'https://example.com');
+
+    expect(sitemap).toContain('https://example.com/');
+    expect(sitemap).toContain('<priority>0.8</priority>');
+    expect(sitemap).toContain('<changefreq>daily</changefreq>');
+    expect(sitemap).not.toContain('https://example.com/users/[id]'); // Dynamic routes excluded
+    expect(sitemap).not.toContain('https://example.com/posts/[...slug]'); // Catch-all routes excluded
+  });
+
+  test('should generate robots.txt with complex routes', () => {
+    const manifest = {
+      routes: [
+        {
+          path: '/api/users/[id]',
+          file: '/app/routes/api/users/[id].plk',
+          params: ['id'],
+          dynamic: true,
+          catchAll: false,
+          layout: undefined,
+          methods: ['GET'],
+          meta: {
+            indexable: true,
+            priority: 0.5,
+            changefreq: 'monthly' as const,
+          },
+        },
+        {
+          path: '/posts/[...slug]',
+          file: '/app/routes/posts/[...slug].plk',
+          params: ['...slug'],
+          dynamic: true,
+          catchAll: true,
+          layout: undefined,
+          methods: ['GET'],
+          meta: {
+            indexable: true,
+            priority: 0.5,
+            changefreq: 'monthly' as const,
+          },
+        },
+      ],
+      layouts: {},
+      rootLayout: undefined,
+      generatedAt: '2024-01-01T00:00:00.000Z',
+      version: '1.0.0',
+    };
+
+    const robots = generateRobotsTxt(manifest, 'https://example.com');
+
+    expect(robots).toContain('User-agent: *');
+    expect(robots).toContain('Disallow: /api/users/[id]');
+    expect(robots).toContain('Disallow: /posts/[...slug]');
+    expect(robots).toContain('Sitemap: https://example.com/sitemap.xml');
   });
 });

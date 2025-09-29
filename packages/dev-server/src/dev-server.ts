@@ -2,22 +2,16 @@
  * @fileoverview Development server implementation
  */
 
-// Note: These imports will be available at runtime
-// import { createServer, type ViteDevServer } from 'vite';
-// import { FileBasedRouter, createRouter } from '@plank/router';
-
 import { EventEmitter } from 'node:events';
 import { watch } from 'node:fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { relative, resolve } from 'node:path';
-import { plankPlugin } from './vite-plugin.js';
 
-// Temporary type definitions until dependencies are installed
-// biome-ignore lint/suspicious/noExplicitAny: Temporary types until dependencies are installed
-type ViteDevServer = any;
-// biome-ignore lint/suspicious/noExplicitAny: Temporary types until dependencies are installed
-type FileBasedRouter = any;
+import type { FileBasedRouter } from '@plank/router';
+import type { ViteDevServer } from 'vite';
 
 import type { DevServer, DevServerConfig, FileChangeEvent, HMRUpdate } from './types.js';
+import { plankPlugin } from './vite-plugin.js';
 
 /**
  * Development server implementation
@@ -79,6 +73,23 @@ export class PlankDevServer extends EventEmitter implements DevServer {
             hmr: this.config.hmr,
             sourcemap: true,
           }),
+          // Add middleware plugin for routing
+          {
+            name: 'plank-router-middleware',
+            configureServer: (server) => {
+              server.middlewares.use(async (req, res, next) => {
+                try {
+                  const handled = await this.handleRouteRequest(req, res);
+                  if (!handled) {
+                    next();
+                  }
+                } catch (error) {
+                  console.error('Route rendering error:', error);
+                  next();
+                }
+              });
+            },
+          },
           ...this.config.plugins,
         ],
         define: {
@@ -185,6 +196,51 @@ export class PlankDevServer extends EventEmitter implements DevServer {
       throw new Error('Router is not initialized');
     }
     return this.router;
+  }
+
+  /**
+   * Handle route request
+   */
+  private async handleRouteRequest(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+    // Skip non-GET requests and API routes
+    if (req.method !== 'GET' || req.url?.startsWith('/api/') || req.url?.startsWith('/_vite')) {
+      return false;
+    }
+
+    // Get the router and try to match the route
+    const router = this.router;
+    if (!router) {
+      return false;
+    }
+
+    const match = router.match(req.url || '/');
+    if (!match) {
+      return false;
+    }
+
+    // Import and render the route component
+    const { SSRRenderer } = await import('@plank/ssr');
+    const renderer = new SSRRenderer({
+      templateDir: this.config.root,
+      assetsDir: resolve(this.config.root, 'dist'),
+      baseUrl: `http://${this.config.host}:${this.config.port}`,
+      streaming: false,
+    });
+
+    const result = await renderer.render(match.route.pagePath, {
+      url: req.url || '/',
+      method: req.method || 'GET',
+      headers: req.headers as Record<string, string>,
+      params: match.params,
+      query: Object.fromEntries(new URL(req.url || '/', `http://${req.headers.host}`).searchParams),
+      data: {},
+    });
+
+    const html = result.html;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.end(html);
+    return true;
   }
 
   /**

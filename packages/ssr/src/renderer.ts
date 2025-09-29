@@ -179,25 +179,20 @@ export class SSRRenderer {
    */
   private async loadTemplate(templatePath: string): Promise<string> {
     try {
-      // In a real implementation, this would load from the configured template directory
-      // For now, we'll create a simple template that the parser can handle
-      const templateName = templatePath.split('/').pop()?.replace('.plk', '') || 'default';
+      const fs = await import('node:fs/promises');
+      const path = await import('node:path');
 
-      return `<html>
-<head>
-  <title>Plank App - ${templateName}</title>
-</head>
-<body>
-  <h1>Welcome to Plank SSR</h1>
-  <p>Template: ${templatePath}</p>
-  <div class="content">
-    <p>This is server-rendered content from the ${templateName} template.</p>
-    <island src="./Counter.plk" client:idle>
-      <div class="loading">Loading counter...</div>
-    </island>
-  </div>
-</body>
-</html>`;
+      // templatePath could be either a full path or relative path
+      // If it's already an absolute path, use it directly
+      // Otherwise, resolve it relative to the template directory
+      const fullPath = path.isAbsolute(templatePath)
+        ? templatePath
+        : path.resolve(this.config.templateDir, templatePath);
+
+      // Read the actual template file
+      const content = await fs.readFile(fullPath, 'utf-8');
+
+      return content;
     } catch (error) {
       throw new Error(
         `Failed to load template ${templatePath}: ${error instanceof Error ? error.message : String(error)}`
@@ -213,6 +208,16 @@ export class SSRRenderer {
     context: SSRContext,
     writer: StreamingWriter
   ): Promise<string> {
+    // Generate basic HTML structure
+    writer.write('<!DOCTYPE html>');
+    writer.write('<html lang="en">');
+    writer.write('<head>');
+    writer.write('<meta charset="utf-8">');
+    writer.write('<meta name="viewport" content="width=device-width, initial-scale=1">');
+    writer.write('<title>Plank App</title>');
+    writer.write('</head>');
+    writer.write('<body>');
+
     // Add progressive enhancement script
     writer.write(this.generateProgressiveEnhancementScript());
 
@@ -227,6 +232,9 @@ export class SSRRenderer {
     if (parseResult.islands.length > 0) {
       writer.write(this.generateIslandHydrationScript(parseResult.islands));
     }
+
+    writer.write('</body>');
+    writer.write('</html>');
 
     return writer.getHtml();
   }

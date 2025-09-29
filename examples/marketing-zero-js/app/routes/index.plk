@@ -1,0 +1,60 @@
+<slot name="title">Home - </slot>
+
+<section class="hero">
+  <div class="container">
+    <h1>Zero JS by Default</h1>
+    <p>Plank ships zero JavaScript on static routes, with islands for interactivity only where needed.</p>
+    <a href="/features" class="cta-button">Learn More</a>
+  </div>
+</section>
+
+<section class="features">
+  <div class="container">
+    <h2 style="text-align: center; font-size: 2rem; margin-bottom: 1rem;">Why Zero JavaScript?</h2>
+    <p style="text-align: center; color: #6b7280; margin-bottom: 2rem;">
+      Traditional frameworks ship megabytes of JavaScript for simple content. Plank takes a different approach.
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature">
+        <h3>⚡ Lightning Fast</h3>
+        <p>Static content loads instantly with zero JavaScript overhead. Perfect for marketing sites and content-heavy applications.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🌍 Better SEO</h3>
+        <p>Search engines love static HTML. No JavaScript required means better crawling and indexing.</p>
+      </div>
+
+      <div class="feature">
+        <h3>📱 Mobile Friendly</h3>
+        <p>Reduce bandwidth usage and improve performance on slower connections and mobile devices.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🔋 Battery Efficient</h3>
+        <p>Less JavaScript means less CPU usage, leading to better battery life on mobile devices.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🏝️ Islands When Needed</h3>
+        <p>Add interactivity only where required using our islands architecture. Progressive enhancement by design.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🎯 Developer Experience</h3>
+        <p>Modern developer tools with hot module replacement, TypeScript support, and familiar patterns.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 4rem 0; background: #f9fafb; text-align: center;">
+  <div class="container">
+    <h2 style="font-size: 2rem; margin-bottom: 1rem;">Ready to Get Started?</h2>
+    <p style="color: #6b7280; margin-bottom: 2rem; font-size: 1.125rem;">
+      Create your first Plank application in seconds.
+    </p>
+    <a href="/docs" class="cta-button">View Documentation</a>
+  </div>
+</section>

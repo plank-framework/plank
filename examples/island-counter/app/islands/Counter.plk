@@ -1,0 +1,52 @@
+<!-- Counter Island Component -->
+<script type="client">
+import { signal } from '@plank/runtime-core';
+import { bindText, bindAttribute } from '@plank/runtime-dom';
+
+export function mount(element, props) {
+  const count = signal(0);
+
+  // Bind text content
+  bindText(element.querySelector('.count'), count);
+
+  // Bind click handlers
+  bindAttribute(element.querySelector('.increment'), 'onclick', () => {
+    count.value++;
+  });
+
+  bindAttribute(element.querySelector('.decrement'), 'onclick', () => {
+    count.value--;
+  });
+
+  bindAttribute(element.querySelector('.reset'), 'onclick', () => {
+    count.value = 0;
+  });
+
+  return {
+    unmount: () => {
+      console.log('Counter island unmounted');
+    }
+  };
+}
+</script>
+
+<div class="counter-island" style="background: #d1fae5; border: 2px solid #10b981; padding: 1.5rem; border-radius: 0.5rem; text-align: center;">
+  <h3 style="color: #065f46; margin-bottom: 1rem;">Counter Island</h3>
+  <p style="font-size: 1.5rem; margin-bottom: 1rem;">
+    Count: <span class="count" style="font-weight: bold; color: #10b981;">0</span>
+  </p>
+  <div style="display: flex; gap: 0.5rem; justify-content: center;">
+    <button class="increment" style="background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+      +1
+    </button>
+    <button class="decrement" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+      -1
+    </button>
+    <button class="reset" style="background: #6b7280; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+      Reset
+    </button>
+  </div>
+  <p style="font-size: 0.875rem; color: #065f46; margin-top: 1rem;">
+    This island loads with client:load strategy
+  </p>
+</div>

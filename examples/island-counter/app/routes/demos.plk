@@ -1,0 +1,123 @@
+<slot name="title">Demos - </slot>
+
+<section class="hero">
+  <div class="container">
+    <h1>Island Demos</h1>
+    <p>Interactive components demonstrating different loading strategies.</p>
+  </div>
+</section>
+
+<section class="demo-section">
+  <div class="container">
+    <div class="island-info">
+      <h3>🎯 Loading Strategies</h3>
+      <p>Islands can be loaded using different strategies to optimize performance and user experience.</p>
+    </div>
+
+    <div class="demo-grid">
+      <div class="demo-card">
+        <h3>client:load</h3>
+        <p>Loads immediately when the page loads. Use for critical interactive elements.</p>
+        <div style="background: #d1fae5; border: 1px solid #10b981; padding: 1rem; border-radius: 0.25rem;">
+          <strong>Counter Island</strong><br>
+          Count: 0<br>
+          <button style="background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; margin-top: 0.5rem;">Increment</button>
+          <button style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; margin-top: 0.5rem; margin-left: 0.5rem;">Decrement</button>
+        </div>
+      </div>
+
+      <div class="demo-card">
+        <h3>client:idle</h3>
+        <p>Loads when the browser is idle. Perfect for secondary interactive features.</p>
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 1rem; border-radius: 0.25rem;">
+          <strong>Timer Island</strong><br>
+          Time: 0s<br>
+          <button style="background: #f59e0b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; margin-top: 0.5rem;">Start Timer</button>
+        </div>
+      </div>
+
+      <div class="demo-card">
+        <h3>client:visible</h3>
+        <p>Loads when the element becomes visible in the viewport. Great for below-the-fold content.</p>
+        <div style="background: #e0e7ff; border: 1px solid #6366f1; padding: 1rem; border-radius: 0.25rem;">
+          <strong>Chart Island</strong><br>
+          <div style="height: 100px; background: linear-gradient(45deg, #6366f1, #8b5cf6); border-radius: 0.25rem; margin-top: 0.5rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+            Interactive Chart
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 3rem;">
+      <h2 style="font-size: 2rem; margin-bottom: 1rem;">Advanced Demos</h2>
+
+      <div class="demo-grid">
+        <div class="demo-card">
+          <h3>Todo List</h3>
+          <p>A fully interactive todo list with add, edit, and delete functionality.</p>
+          <div style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.25rem;">
+            <strong>Todo Island</strong><br>
+            <div style="margin-top: 0.5rem;">
+              <input type="text" placeholder="Add a todo..." style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem; margin-bottom: 0.5rem;">
+              <button style="background: #2563eb; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem;">Add Todo</button>
+            </div>
+            <ul style="margin-top: 1rem; list-style: none;">
+              <li style="padding: 0.5rem; border-bottom: 1px solid #e5e7eb;">Sample todo item</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="demo-card">
+          <h3>Search Component</h3>
+          <p>Real-time search with debounced input and suggestions.</p>
+          <div style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.25rem;">
+            <strong>Search Island</strong><br>
+            <div style="margin-top: 0.5rem;">
+              <input type="text" placeholder="Search..." style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem;">
+              <div style="margin-top: 0.5rem; font-size: 0.875rem; color: #6b7280;">
+                Results will appear here...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-card">
+          <h3>Form Validation</h3>
+          <p>Real-time form validation with instant feedback.</p>
+          <div style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.25rem;">
+            <strong>Form Island</strong><br>
+            <div style="margin-top: 0.5rem;">
+              <input type="email" placeholder="Email address" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem; margin-bottom: 0.5rem;">
+              <input type="password" placeholder="Password" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.25rem; margin-bottom: 0.5rem;">
+              <button style="background: #2563eb; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; width: 100%;">Submit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-block">
+// Example island component
+&lt;script type="client"&gt;
+import { signal } from '@plank/runtime-core';
+import { bindText, bindAttribute } from '@plank/runtime-dom';
+
+export function mount(element, props) {
+  const count = signal(0);
+
+  bindText(element.querySelector('.count'), count);
+  bindAttribute(element.querySelector('.increment'), 'onclick', () => count.value++);
+
+  return {
+    unmount: () => console.log('Counter unmounted')
+  };
+}
+&lt;/script&gt;
+
+&lt;div class="counter"&gt;
+  &lt;p&gt;Count: &lt;span class="count"&gt;0&lt;/span&gt;&lt;/p&gt;
+  &lt;button class="increment"&gt;Increment&lt;/button&gt;
+&lt;/div&gt;
+    </div>
+  </div>
+</section>

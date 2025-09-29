@@ -1,0 +1,20 @@
+{
+  "name": "marketing-zero-js",
+  "version": "0.1.0",
+  "description": "Marketing site demonstrating zero JavaScript shipping with Plank",
+  "type": "module",
+  "scripts": {
+    "dev": "plank dev",
+    "build": "plank build",
+    "preview": "plank preview"
+  },
+  "dependencies": {
+    "@plank/compiler": "workspace:*",
+    "@plank/router": "workspace:*",
+    "@plank/ssr": "workspace:*",
+    "@plank/dev-server": "workspace:*"
+  },
+  "devDependencies": {
+    "plank": "workspace:*"
+  }
+}

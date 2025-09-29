@@ -159,6 +159,7 @@ async function processPlkFile(
   dependencies: unknown[];
   islands: unknown[];
   actions: unknown[];
+  chunks: unknown[];
   errors: unknown[];
 }> {
   try {
@@ -180,6 +181,7 @@ async function processPlkFile(
       dependencies: result.dependencies,
       islands: result.islands,
       actions: result.actions,
+      chunks: result.chunks,
       errors: result.errors,
     };
   } catch (error) {
@@ -192,6 +194,7 @@ async function processPlkFile(
       dependencies: [],
       islands: [],
       actions: [],
+      chunks: [],
       errors: [error],
     };
   }
@@ -207,6 +210,7 @@ function generateJavaScriptCode(
     dependencies: unknown[];
     islands: unknown[];
     actions: unknown[];
+    chunks: unknown[];
     errors: unknown[];
   },
   filePath: string,
@@ -215,7 +219,7 @@ function generateJavaScriptCode(
     transform: PlankPluginOptions['transform'];
   }
 ): string {
-  const { code, scripts, dependencies, islands, actions, errors } = result;
+  const { code, scripts, dependencies, islands, actions, chunks, errors } = result;
 
   // If there are compilation errors, return error code
   if (errors.length > 0) {
@@ -261,6 +265,12 @@ function generateJavaScriptCode(
     moduleCode += `export const actions = ${JSON.stringify(actions)};\n\n`;
   }
 
+  // Add chunks
+  if (chunks.length > 0) {
+    moduleCode += `// Chunks\n`;
+    moduleCode += `export const chunks = ${JSON.stringify(chunks)};\n\n`;
+  }
+
   // Add default export
   moduleCode += `// Default export\n`;
   moduleCode += `export default {\n`;
@@ -270,6 +280,9 @@ function generateJavaScriptCode(
   }
   if (actions.length > 0) {
     moduleCode += `  actions,\n`;
+  }
+  if (chunks.length > 0) {
+    moduleCode += `  chunks,\n`;
   }
   moduleCode += `};\n`;
 

@@ -1,0 +1,122 @@
+<slot name="title">About - </slot>
+
+<section class="hero">
+  <div class="container">
+    <h1>About Islands</h1>
+    <p>Understanding Plank's islands architecture and its benefits.</p>
+  </div>
+</section>
+
+<section style="padding: 4rem 0;">
+  <div class="container">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <h2 style="font-size: 2rem; margin-bottom: 2rem;">What are Islands?</h2>
+      <p style="font-size: 1.125rem; line-height: 1.8; color: #4b5563; margin-bottom: 2rem;">
+        Islands are interactive components that exist within a sea of static HTML. Unlike traditional
+        Single Page Applications (SPAs) that ship large JavaScript bundles for every page, islands
+        allow you to add interactivity only where it's needed.
+      </p>
+
+      <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 2rem; border-radius: 0.5rem; margin: 2rem 0;">
+        <h3 style="color: #0c4a6e; margin-bottom: 1rem;">🏝️ The Islands Architecture</h3>
+        <p style="color: #075985; margin-bottom: 1rem;">
+          Think of your webpage as an ocean of static HTML with small islands of interactivity scattered throughout.
+          Each island is self-contained and loads its own JavaScript only when needed.
+        </p>
+      </div>
+
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem; margin-top: 3rem;">Benefits of Islands</h3>
+
+      <div style="display: grid; gap: 1.5rem; margin: 2rem 0;">
+        <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #10b981;">
+          <h4 style="color: #065f46; margin-bottom: 0.5rem;">⚡ Faster Initial Load</h4>
+          <p style="color: #4b5563;">
+            Static content loads instantly without waiting for JavaScript. Only interactive components
+            load their JavaScript when needed.
+          </p>
+        </div>
+
+        <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #3b82f6;">
+          <h4 style="color: #1e40af; margin-bottom: 0.5rem;">🎯 Progressive Enhancement</h4>
+          <p style="color: #4b5563;">
+            Your site works perfectly without JavaScript, then enhances with interactivity where needed.
+            This provides a better experience for all users.
+          </p>
+        </div>
+
+        <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #f59e0b;">
+          <h4 style="color: #92400e; margin-bottom: 0.5rem;">📱 Better Mobile Performance</h4>
+          <p style="color: #4b5563;">
+            Reduced JavaScript means less CPU usage, better battery life, and improved performance
+            on slower devices and networks.
+          </p>
+        </div>
+
+        <div style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #8b5cf6;">
+          <h4 style="color: #6b21a8; margin-bottom: 0.5rem;">🔍 SEO Friendly</h4>
+          <p style="color: #4b5563;">
+            Search engines can crawl your static content immediately. No need for complex
+            server-side rendering or hydration strategies.
+          </p>
+        </div>
+      </div>
+
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem; margin-top: 3rem;">Loading Strategies</h3>
+
+      <div class="demo-grid" style="margin: 2rem 0;">
+        <div class="demo-card">
+          <h4>client:load</h4>
+          <p>Loads immediately when the page loads. Use for critical interactive elements like navigation or primary CTAs.</p>
+        </div>
+
+        <div class="demo-card">
+          <h4>client:idle</h4>
+          <p>Loads when the browser is idle. Perfect for secondary features like analytics or non-critical widgets.</p>
+        </div>
+
+        <div class="demo-card">
+          <h4>client:visible</h4>
+          <p>Loads when the element becomes visible. Great for below-the-fold content like comments or related articles.</p>
+        </div>
+      </div>
+
+      <div class="code-block">
+&lt;!-- Critical interactive element --&gt;
+&lt;island src="./Navigation.plk" client:load&gt;
+  &lt;nav&gt;Loading navigation...&lt;/nav&gt;
+&lt;/island&gt;
+
+&lt;!-- Secondary feature --&gt;
+&lt;island src="./Analytics.plk" client:idle&gt;
+  &lt;div&gt;Loading analytics...&lt;/div&gt;
+&lt;/island&gt;
+
+&lt;!-- Below-the-fold content --&gt;
+&lt;island src="./Comments.plk" client:visible&gt;
+  &lt;div&gt;Loading comments...&lt;/div&gt;
+&lt;/island&gt;
+      </div>
+
+      <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 2rem; border-radius: 0.5rem; margin-top: 3rem;">
+        <h3 style="color: #0c4a6e; margin-bottom: 1rem;">When to Use Islands</h3>
+        <ul style="color: #075985; margin-left: 1.5rem;">
+          <li style="margin-bottom: 0.5rem;"><strong>Interactive forms</strong> - Real-time validation, dynamic fields</li>
+          <li style="margin-bottom: 0.5rem;"><strong>Search components</strong> - Autocomplete, filtering, suggestions</li>
+          <li style="margin-bottom: 0.5rem;"><strong>Data visualization</strong> - Charts, graphs, interactive maps</li>
+          <li style="margin-bottom: 0.5rem;"><strong>Media players</strong> - Video players, audio controls</li>
+          <li style="margin-bottom: 0.5rem;"><strong>Widgets</strong> - Calculators, converters, tools</li>
+          <li style="margin-bottom: 0.5rem;"><strong>Comments systems</strong> - Real-time updates, moderation</li>
+        </ul>
+      </div>
+
+      <div style="background: #f9fafb; padding: 2rem; border-radius: 0.5rem; margin-top: 3rem;">
+        <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Get Started</h3>
+        <p style="color: #4b5563; margin-bottom: 1rem;">
+          Ready to build with islands? Check out our demos and start creating interactive components
+          that enhance your static content.
+        </p>
+        <a href="/demos" style="background: #2563eb; color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">View Demos</a>
+      </div>
+    </div>
+  </div>
+</section>

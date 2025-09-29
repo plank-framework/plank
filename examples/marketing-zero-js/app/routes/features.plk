@@ -1,0 +1,90 @@
+<slot name="title">Features - </slot>
+
+<section class="hero">
+  <div class="container">
+    <h1>Plank Features</h1>
+    <p>Everything you need to build fast, modern web applications with minimal JavaScript.</p>
+  </div>
+</section>
+
+<section class="features">
+  <div class="container">
+    <div class="feature-grid">
+      <div class="feature">
+        <h3>🏗️ Server-Side Rendering</h3>
+        <p>Full SSR support with streaming HTML output for maximum performance and SEO benefits.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🏝️ Islands Architecture</h3>
+        <p>Progressive enhancement with islands that load only when needed. Perfect for interactive components.</p>
+      </div>
+
+      <div class="feature">
+        <h3>⚡ Hot Module Replacement</h3>
+        <p>Lightning-fast development with HMR for .plk files and instant feedback during development.</p>
+      </div>
+
+      <div class="feature">
+        <h3>📁 File-Based Routing</h3>
+        <p>Intuitive file-based routing system that maps your file structure to URL routes automatically.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🔧 TypeScript Support</h3>
+        <p>First-class TypeScript support with strict type checking and excellent developer experience.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🎨 Tailwind CSS Integration</h3>
+        <p>Built-in support for Tailwind CSS with optimized builds and purging for production.</p>
+      </div>
+
+      <div class="feature">
+        <h3>📊 Performance Budgets</h3>
+        <p>Enforced performance budgets that fail builds when JavaScript bundles exceed limits.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🔒 Security First</h3>
+        <p>Built-in CSRF protection, HTML escaping, and security best practices out of the box.</p>
+      </div>
+
+      <div class="feature">
+        <h3>🌐 Edge Ready</h3>
+        <p>Deploy to any edge runtime including Cloudflare Workers, Vercel Edge, and Deno Deploy.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 4rem 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center;">
+  <div class="container">
+    <h2 style="font-size: 2rem; margin-bottom: 1rem;">Performance Comparison</h2>
+    <p style="margin-bottom: 2rem; opacity: 0.9; font-size: 1.125rem;">
+      See how Plank compares to other frameworks in real-world scenarios.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-top: 2rem;">
+      <div style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 0.5rem;">
+        <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">0 KB</h3>
+        <p>Plank Static Routes</p>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 0.5rem;">
+        <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">~10 KB</h3>
+        <p>Plank with Islands</p>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 0.5rem;">
+        <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">~130 KB</h3>
+        <p>Next.js Static</p>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 0.5rem;">
+        <h3 style="font-size: 2rem; margin-bottom: 0.5rem;">~200 KB</h3>
+        <p>React SPA</p>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,22 @@
+{
+  "name": "island-counter",
+  "version": "0.1.0",
+  "description": "Island architecture example demonstrating interactive components with Plank",
+  "type": "module",
+  "scripts": {
+    "dev": "plank dev",
+    "build": "plank build",
+    "preview": "plank preview"
+  },
+  "dependencies": {
+    "@plank/compiler": "workspace:*",
+    "@plank/router": "workspace:*",
+    "@plank/ssr": "workspace:*",
+    "@plank/dev-server": "workspace:*",
+    "@plank/runtime-core": "workspace:*",
+    "@plank/runtime-dom": "workspace:*"
+  },
+  "devDependencies": {
+    "plank": "workspace:*"
+  }
+}

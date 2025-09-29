@@ -1,0 +1,99 @@
+<!-- Chart Island Component -->
+<script type="client">
+import { signal } from '@plank/runtime-core';
+import { bindAttribute } from '@plank/runtime-dom';
+
+export function mount(element, props) {
+  const data = signal([30, 45, 60, 35, 80, 25, 90]);
+  const selectedIndex = signal(-1);
+
+  const canvas = element.querySelector('.chart-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function drawChart() {
+    const values = data.value;
+    const maxValue = Math.max(...values);
+    const barWidth = canvas.width / values.length;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    values.forEach((value, index) => {
+      const barHeight = (value / maxValue) * canvas.height;
+      const x = index * barWidth;
+      const y = canvas.height - barHeight;
+
+      // Color based on selection
+      if (index === selectedIndex.value) {
+        ctx.fillStyle = '#ef4444';
+      } else {
+        ctx.fillStyle = `hsl(${200 + index * 30}, 70%, 60%)`;
+      }
+
+      ctx.fillRect(x + 2, y, barWidth - 4, barHeight);
+
+      // Add value labels
+      ctx.fillStyle = '#374151';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(value.toString(), x + barWidth / 2, y - 5);
+    });
+  }
+
+  // Bind click handler for chart interaction
+  bindAttribute(canvas, 'onclick', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const barWidth = canvas.width / data.value.length;
+    const clickedIndex = Math.floor(x / barWidth);
+
+    if (clickedIndex >= 0 && clickedIndex < data.value.length) {
+      selectedIndex.value = selectedIndex.value === clickedIndex ? -1 : clickedIndex;
+      drawChart();
+    }
+  });
+
+  // Bind button handlers
+  bindAttribute(element.querySelector('.randomize'), 'onclick', () => {
+    data.value = data.value.map(() => Math.floor(Math.random() * 100) + 10);
+    selectedIndex.value = -1;
+    drawChart();
+  });
+
+  bindAttribute(element.querySelector('.add-data'), 'onclick', () => {
+    data.value = [...data.value, Math.floor(Math.random() * 100) + 10];
+    drawChart();
+  });
+
+  // Initial draw
+  drawChart();
+
+  return {
+    unmount: () => {
+      console.log('Chart island unmounted');
+    }
+  };
+}
+</script>
+
+<div class="chart-island" style="background: #e0e7ff; border: 2px solid #6366f1; padding: 1.5rem; border-radius: 0.5rem; text-align: center;">
+  <h3 style="color: #4338ca; margin-bottom: 1rem;">Interactive Chart Island</h3>
+
+  <canvas class="chart-canvas" width="400" height="200" style="border: 1px solid #c7d2fe; border-radius: 0.25rem; margin-bottom: 1rem; cursor: pointer;"></canvas>
+
+  <p style="color: #4338ca; margin-bottom: 1rem; font-size: 0.875rem;">
+    Click on bars to highlight them
+  </p>
+
+  <div style="display: flex; gap: 0.5rem; justify-content: center;">
+    <button class="randomize" style="background: #6366f1; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+      Randomize
+    </button>
+    <button class="add-data" style="background: #8b5cf6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+      Add Bar
+    </button>
+  </div>
+
+  <p style="font-size: 0.875rem; color: #4338ca; margin-top: 1rem;">
+    This island loads with client:visible strategy
+  </p>
+</div>

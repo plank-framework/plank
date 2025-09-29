@@ -1,0 +1,96 @@
+<slot name="title">Documentation - </slot>
+
+<section class="hero">
+  <div class="container">
+    <h1>Documentation</h1>
+    <p>Learn how to build fast, efficient web applications with Plank.</p>
+  </div>
+</section>
+
+<section style="padding: 4rem 0;">
+  <div class="container">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 2rem;">
+        <h3 style="color: #0c4a6e; margin-bottom: 0.5rem;">🚧 Documentation Coming Soon</h3>
+        <p style="color: #075985;">
+          We're working hard on comprehensive documentation. In the meantime, check out our examples and GitHub repository.
+        </p>
+      </div>
+
+      <h2 style="font-size: 2rem; margin-bottom: 2rem;">Quick Start</h2>
+
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Installation</h3>
+      <pre style="background: #1f2937; color: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 2rem;"><code>npm create plank@latest my-app
+cd my-app
+npm install
+npm run dev</code></pre>
+
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Project Structure</h3>
+      <pre style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 2rem;"><code>my-app/
+├── app/
+│   ├── routes/          # File-based routing
+│   │   ├── index.plk    # Home page
+│   │   └── about.plk    # About page
+│   └── layouts/         # Layout components
+│       └── root.plk     # Root layout
+├── public/              # Static assets
+├── plank.config.ts      # Configuration
+└── package.json</code></pre>
+
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Creating Pages</h3>
+      <p style="color: #4b5563; margin-bottom: 1rem;">
+        Create a new page by adding a <code>.plk</code> file to the <code>app/routes/</code> directory:
+      </p>
+      <pre style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 2rem;"><code>&lt;div&gt;
+  &lt;h1&gt;My New Page&lt;/h1&gt;
+  &lt;p&gt;This page ships zero JavaScript!&lt;/p&gt;
+&lt;/div&gt;</code></pre>
+
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Adding Islands</h3>
+      <p style="color: #4b5563; margin-bottom: 1rem;">
+        Add interactivity with islands:
+      </p>
+      <pre style="background: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 2rem;"><code>&lt;div&gt;
+  &lt;h1&gt;Interactive Page&lt;/h1&gt;
+  &lt;!-- This island loads only when needed --&gt;
+  &lt;island src="./Counter.plk" client:idle&gt;
+    &lt;div&gt;Loading counter...&lt;/div&gt;
+  &lt;/island&gt;
+&lt;/div&gt;</code></pre>
+
+      <h2 style="font-size: 2rem; margin-bottom: 2rem; margin-top: 3rem;">Key Concepts</h2>
+
+      <div style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem;">🏝️ Islands Architecture</h3>
+        <p style="color: #4b5563;">
+          Progressive enhancement with interactive components that load only when needed.
+          Perfect for adding interactivity to otherwise static pages.
+        </p>
+      </div>
+
+      <div style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem;">📁 File-Based Routing</h3>
+        <p style="color: #4b5563;">
+          Intuitive routing system that maps your file structure to URL routes automatically.
+          No configuration required.
+        </p>
+      </div>
+
+      <div style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.25rem; margin-bottom: 0.5rem;">⚡ Performance Budgets</h3>
+        <p style="color: #4b5563;">
+          Enforced limits on JavaScript bundle sizes. Builds fail when budgets are exceeded,
+          ensuring optimal performance.
+        </p>
+      </div>
+
+      <div style="background: #f9fafb; padding: 2rem; border-radius: 0.5rem; margin-top: 3rem;">
+        <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Need Help?</h3>
+        <p style="color: #4b5563; margin-bottom: 1rem;">
+          Join our community and get help from other developers.
+        </p>
+        <a href="https://github.com/plank-framework/plank" class="cta-button" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+      </div>
+    </div>
+  </div>
+</section>

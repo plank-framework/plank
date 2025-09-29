@@ -1,0 +1,62 @@
+<slot name="title">About - </slot>
+
+<section class="hero">
+  <div class="container">
+    <h1>About Plank</h1>
+    <p>Building the future of web development with zero JavaScript by default.</p>
+  </div>
+</section>
+
+<section style="padding: 4rem 0;">
+  <div class="container">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <h2 style="font-size: 2rem; margin-bottom: 2rem;">Our Mission</h2>
+      <p style="font-size: 1.125rem; line-height: 1.8; color: #4b5563; margin-bottom: 2rem;">
+        Plank was born from a simple observation: most web applications ship way too much JavaScript.
+        While JavaScript is powerful and necessary for interactivity, it shouldn't be required for every
+        page on your site.
+      </p>
+
+      <p style="font-size: 1.125rem; line-height: 1.8; color: #4b5563; margin-bottom: 2rem;">
+        We believe in progressive enhancement. Start with fast, semantic HTML that works everywhere,
+        then add interactivity only where it's needed. This approach leads to better performance,
+        improved SEO, and a superior user experience.
+      </p>
+
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem; margin-top: 3rem;">The Problem</h3>
+      <p style="font-size: 1.125rem; line-height: 1.8; color: #4b5563; margin-bottom: 2rem;">
+        Modern web frameworks encourage shipping large JavaScript bundles even for static content.
+        This leads to:
+      </p>
+
+      <ul style="font-size: 1.125rem; line-height: 1.8; color: #4b5563; margin-bottom: 2rem; padding-left: 2rem;">
+        <li style="margin-bottom: 0.5rem;">Slower initial page loads</li>
+        <li style="margin-bottom: 0.5rem;">Poor mobile performance</li>
+        <li style="margin-bottom: 0.5rem;">Increased bandwidth usage</li>
+        <li style="margin-bottom: 0.5rem;">Battery drain on mobile devices</li>
+        <li style="margin-bottom: 0.5rem;">SEO challenges with client-side rendering</li>
+      </ul>
+
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem; margin-top: 3rem;">Our Solution</h3>
+      <p style="font-size: 1.125rem; line-height: 1.8; color: #4b5563; margin-bottom: 2rem;">
+        Plank takes a different approach:
+      </p>
+
+      <ul style="font-size: 1.125rem; line-height: 1.8; color: #4b5563; margin-bottom: 2rem; padding-left: 2rem;">
+        <li style="margin-bottom: 0.5rem;"><strong>Zero JS by default</strong> - Static pages ship no JavaScript</li>
+        <li style="margin-bottom: 0.5rem;"><strong>Islands for interactivity</strong> - Add JavaScript only where needed</li>
+        <li style="margin-bottom: 0.5rem;"><strong>Server-side rendering</strong> - Fast initial page loads with SSR</li>
+        <li style="margin-bottom: 0.5rem;"><strong>Performance budgets</strong> - Enforced limits on JavaScript bundle sizes</li>
+        <li style="margin-bottom: 0.5rem;"><strong>Progressive enhancement</strong> - Works without JavaScript, enhanced with it</li>
+      </ul>
+
+      <div style="background: #f9fafb; padding: 2rem; border-radius: 0.5rem; margin-top: 3rem;">
+        <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Get Started Today</h3>
+        <p style="color: #4b5563; margin-bottom: 1rem;">
+          Ready to build faster, more efficient web applications? Try Plank today.
+        </p>
+        <a href="/docs" class="cta-button">Start Building</a>
+      </div>
+    </div>
+  </div>
+</section>

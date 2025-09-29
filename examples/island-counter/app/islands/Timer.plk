@@ -1,0 +1,77 @@
+<!-- Timer Island Component -->
+<script type="client">
+import { signal } from '@plank/runtime-core';
+import { bindText, bindAttribute } from '@plank/runtime-dom';
+
+export function mount(element, props) {
+  const time = signal(0);
+  const isRunning = signal(false);
+  let intervalId = null;
+
+  // Bind text content
+  bindText(element.querySelector('.time'), time);
+  bindText(element.querySelector('.status'), () => isRunning.value ? 'Running' : 'Stopped');
+
+  // Bind click handlers
+  bindAttribute(element.querySelector('.start'), 'onclick', () => {
+    if (!isRunning.value) {
+      isRunning.value = true;
+      intervalId = setInterval(() => {
+        time.value++;
+      }, 1000);
+    }
+  });
+
+  bindAttribute(element.querySelector('.stop'), 'onclick', () => {
+    if (isRunning.value) {
+      isRunning.value = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+  });
+
+  bindAttribute(element.querySelector('.reset'), 'onclick', () => {
+    isRunning.value = false;
+    time.value = 0;
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  });
+
+  return {
+    unmount: () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      console.log('Timer island unmounted');
+    }
+  };
+}
+</script>
+
+<div class="timer-island" style="background: #fef3c7; border: 2px solid #f59e0b; padding: 1.5rem; border-radius: 0.5rem; text-align: center;">
+  <h3 style="color: #92400e; margin-bottom: 1rem;">Timer Island</h3>
+  <p style="font-size: 2rem; margin-bottom: 1rem;">
+    <span class="time" style="font-weight: bold; color: #f59e0b;">0</span>s
+  </p>
+  <p style="margin-bottom: 1rem;">
+    Status: <span class="status" style="font-weight: bold; color: #92400e;">Stopped</span>
+  </p>
+  <div style="display: flex; gap: 0.5rem; justify-content: center;">
+    <button class="start" style="background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+      Start
+    </button>
+    <button class="stop" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+      Stop
+    </button>
+    <button class="reset" style="background: #6b7280; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+      Reset
+    </button>
+  </div>
+  <p style="font-size: 0.875rem; color: #92400e; margin-top: 1rem;">
+    This island loads with client:idle strategy
+  </p>
+</div>

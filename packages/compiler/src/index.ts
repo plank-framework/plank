@@ -30,6 +30,14 @@ export interface CompileResult {
   islands: string[];
   /** Server actions found */
   actions: string[];
+  /** Code-split chunks for islands */
+  chunks: Array<{
+    src: string;
+    strategy: string;
+    code: string;
+    dependencies: string[];
+    id: string;
+  }>;
   /** Parsing errors */
   errors: Array<{ message: string; line: number; column: number; filename?: string | undefined }>;
 }
@@ -60,6 +68,7 @@ export function compile(source: string, options: CompilerOptions = {}): CompileR
     dependencies: codegenResult.dependencies,
     islands: codegenResult.islands,
     actions: codegenResult.actions,
+    chunks: codegenResult.chunks,
     errors: parseResult.errors,
   };
 }

@@ -114,6 +114,7 @@ describe('Plank Vite Plugin', () => {
       dependencies: [],
       islands: [],
       actions: [],
+      chunks: [],
       errors: [],
     });
 

@@ -3,7 +3,7 @@
  * Converts AST to JavaScript code for server and client
  */
 
-import type { DirectiveNode, ScriptNode, TemplateNode } from './grammar.js';
+import type { DirectiveNode, IslandNode, ScriptNode, TemplateNode } from './grammar.js';
 import type { ParseResult } from './parser.js';
 
 export interface CodegenOptions {
@@ -28,6 +28,21 @@ export interface CodegenResult {
   islands: string[];
   /** Server actions used */
   actions: string[];
+  /** Code-split chunks for islands */
+  chunks: IslandChunk[];
+}
+
+export interface IslandChunk {
+  /** Island source path */
+  src: string;
+  /** Loading strategy */
+  strategy: string;
+  /** Generated chunk code */
+  code: string;
+  /** Dependencies for this chunk */
+  dependencies: string[];
+  /** Chunk ID for dynamic imports */
+  id: string;
 }
 
 /**
@@ -63,6 +78,7 @@ class CodeGenerator {
   private imports: Set<string> = new Set();
   private islands: Set<string> = new Set();
   private actions: Set<string> = new Set();
+  private chunks: IslandChunk[] = [];
   private code: string[] = [];
   private indentLevel = 0;
 
@@ -85,6 +101,7 @@ class CodeGenerator {
       dependencies: Array.from(this.imports),
       islands: Array.from(this.islands),
       actions: Array.from(this.actions),
+      chunks: this.chunks,
     };
   }
 
@@ -92,6 +109,7 @@ class CodeGenerator {
     this.imports.clear();
     this.islands.clear();
     this.actions.clear();
+    this.chunks = [];
     this.code = [];
     this.indentLevel = 0;
   }
@@ -239,6 +257,9 @@ class CodeGenerator {
     this.addIslandAttributes(islandVar, node.island.src, node.island.strategy);
     this.generateIslandChildren(node, islandVar);
     this.addLine(`container.appendChild(${islandVar});`);
+
+    // Generate code-split chunk for this island
+    this.generateIslandChunk(node.island);
   }
 
   private generateIslandFromTag(node: TemplateNode): void {
@@ -258,6 +279,15 @@ class CodeGenerator {
 
     this.generateIslandChildren(node, islandVar);
     this.addLine(`container.appendChild(${islandVar});`);
+
+    // Generate code-split chunk for this island
+    if (node.attributes?.src && strategy) {
+      const island: IslandNode = {
+        src: node.attributes.src,
+        strategy: strategy as IslandNode['strategy'],
+      };
+      this.generateIslandChunk(island);
+    }
   }
 
   private createIslandElement(): string {
@@ -386,6 +416,44 @@ class CodeGenerator {
 
   private escapeString(str: string): string {
     return str.replace(/"/g, '\\"').replace(/\\/g, '\\\\');
+  }
+
+  private generateIslandChunk(island: IslandNode): void {
+    const chunkId = `island_${island.src.replace(/[^a-zA-Z0-9]/g, '_')}_${island.strategy}`;
+
+    // Generate chunk code for the island
+    const chunkCode = this.generateIslandChunkCode(island);
+
+    // Create chunk entry
+    const chunk: IslandChunk = {
+      src: island.src,
+      strategy: island.strategy,
+      code: chunkCode,
+      dependencies: [`@plank/runtime-dom`, `@plank/runtime-core`],
+      id: chunkId,
+    };
+
+    this.chunks.push(chunk);
+  }
+
+  private generateIslandChunkCode(island: IslandNode): string {
+    const lines: string[] = [];
+
+    // Import runtime dependencies
+    lines.push(`import { signal, computed, effect } from '@plank/runtime-core';`);
+    lines.push(`import { bindText, bindAttribute, bindProperty, mountIsland } from '@plank/runtime-dom';`);
+
+    // Generate island component code
+    lines.push(`export function mount${island.src.replace(/[^a-zA-Z0-9]/g, '')}(element, props = {}) {`);
+    lines.push(`  // Island component logic for ${island.src}`);
+    lines.push(`  // This would be generated from the actual island template`);
+    lines.push(`  console.log('Mounting island ${island.src} with strategy ${island.strategy}');`);
+    lines.push(`  return {`);
+    lines.push(`    unmount: () => console.log('Unmounting island ${island.src}')`);
+    lines.push(`  };`);
+    lines.push(`}`);
+
+    return lines.join('\n');
   }
 }
 

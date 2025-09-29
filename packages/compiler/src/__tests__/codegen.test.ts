@@ -72,7 +72,42 @@ describe('Code Generation', () => {
     expect(result.code).toContain('data-src');
     expect(result.code).toContain('data-strategy');
     expect(result.islands).toContain('./Counter.plk');
-    // CodegenResult doesn't have errors property
+    expect(result.chunks).toHaveLength(1);
+    expect(result.chunks[0]).toMatchObject({
+      src: './Counter.plk',
+      strategy: 'load',
+      id: expect.stringContaining('island___Counter_plk_load'),
+    });
+  });
+
+  it('should generate code-split chunks for multiple islands', () => {
+    const template = `
+      <div>
+        <island src="./Counter.plk" client:load>
+          <div>Loading counter...</div>
+        </island>
+        <island src="./Chart.plk" client:idle>
+          <div>Loading chart...</div>
+        </island>
+      </div>
+    `;
+
+    const result = compile(template, { target: 'client' });
+
+    expect(result.chunks).toHaveLength(2);
+
+    // Check Counter island chunk
+    const counterChunk = result.chunks.find(c => c.src === './Counter.plk');
+    expect(counterChunk).toBeDefined();
+    expect(counterChunk?.strategy).toBe('load');
+    expect(counterChunk?.code).toContain('mountCounterplk');
+    expect(counterChunk?.dependencies).toContain('@plank/runtime-dom');
+
+    // Check Chart island chunk
+    const chartChunk = result.chunks.find(c => c.src === './Chart.plk');
+    expect(chartChunk).toBeDefined();
+    expect(chartChunk?.strategy).toBe('idle');
+    expect(chartChunk?.code).toContain('mountChartplk');
   });
 
   it('should generate DOM IR for template', () => {

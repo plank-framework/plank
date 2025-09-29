@@ -194,12 +194,68 @@ export class PlankParser {
   }
 
   private parseExpression(expression: string): ExpressionNode {
-    // TODO: Implement full expression parsing
-    // This is a placeholder for Phase A implementation
+    // Basic expression parsing for Phase A
+    const trimmed = expression.trim();
 
+    // Handle simple variable references
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimmed)) {
+      return {
+        type: 'variable',
+        value: trimmed,
+      };
+    }
+
+    // Handle property access (e.g., user.name, obj.prop)
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*\.[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimmed)) {
+      const parts = trimmed.split('.');
+      const object = parts[0];
+      const property = parts[1];
+      if (object && property) {
+        return {
+          type: 'property',
+          object,
+          property,
+        };
+      }
+    }
+
+    // Handle function calls (e.g., getName(), obj.method())
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*\(\)$/.test(trimmed)) {
+      return {
+        type: 'function',
+        name: trimmed.slice(0, -2),
+      };
+    }
+
+    // Handle string literals
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+        (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+      return {
+        type: 'string',
+        value: trimmed.slice(1, -1),
+      };
+    }
+
+    // Handle boolean literals
+    if (trimmed === 'true' || trimmed === 'false') {
+      return {
+        type: 'boolean',
+        value: trimmed === 'true',
+      };
+    }
+
+    // Handle number literals
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+      return {
+        type: 'number',
+        value: parseFloat(trimmed),
+      };
+    }
+
+    // Default to variable for complex expressions (to be enhanced in Phase B)
     return {
       type: 'variable',
-      value: expression,
+      value: trimmed,
     };
   }
 

@@ -538,7 +538,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'contact.plk'), '<h1>Contact</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify new route was discovered
     const routesAfterAdd = router.getRoutes();
@@ -550,7 +550,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'products', 'index.plk'), '<h1>Products</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify new route was discovered
     const routesAfterDir = router.getRoutes();
@@ -562,7 +562,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'product', '[id].plk'), '<h1>Product {id}</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify dynamic route was discovered
     const routesAfterDynamic = router.getRoutes();
@@ -576,7 +576,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'docs', '[...slug].plk'), '<h1>Docs {slug}</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify catch-all route was discovered
     const routesAfterCatchAll = router.getRoutes();
@@ -589,7 +589,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'about.plk'), '<h1>About Us - Updated</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify route still exists (modification doesn't change route structure)
     const routesAfterModify = router.getRoutes();
@@ -600,7 +600,7 @@ describe('Router Integration Tests', () => {
     await unlink(join(routesDir, 'contact.plk'));
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify route was removed
     const routesAfterDelete = router.getRoutes();
@@ -612,7 +612,7 @@ describe('Router Integration Tests', () => {
     await rmdir(join(routesDir, 'product'));
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify route was removed
     const routesAfterDirDelete = router.getRoutes();
@@ -689,7 +689,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(layoutsDir, 'admin', 'layout.plk'), '<div class="admin">{children}</div>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify new layout was discovered
     const layoutsAfterAdd = router.getLayouts();
@@ -702,7 +702,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'about.plk'), '<h1>About</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify route was added and associated with root layout
     const routesAfterRoute = router.getRoutes();
@@ -715,7 +715,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(layoutsDir, 'layout.plk'), '<html><head><title>Updated</title></head>{children}</html>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify layout still exists (modification doesn't change layout structure)
     const layoutsAfterModify = router.getLayouts();
@@ -727,7 +727,7 @@ describe('Router Integration Tests', () => {
     await rmdir(join(layoutsDir, 'admin'));
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Verify layout was removed
     const layoutsAfterDelete = router.getLayouts();

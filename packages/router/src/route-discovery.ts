@@ -102,7 +102,8 @@ function parseRouteFile(
   const dirPath = dirname(relativePath);
 
   // Determine file type
-  const fileType = determineFileType(fileName, filePath);
+  const fullFileName = basename(filePath);
+  const fileType = determineFileType(fullFileName, filePath);
   if (!fileType) {
     return null;
   }
@@ -153,11 +154,12 @@ function determineFileType(fileName: string, filePath: string): RouteFileType | 
 function parseRoutePath(dirPath: string, fileName: string, fileType: RouteFileType): string {
   const segments = dirPath.split('/').filter(Boolean);
 
-  // Add directory segments
-  const pathSegments = [...segments];
+  // Add directory segments (skip '.' which represents current directory)
+  const pathSegments = segments.filter(seg => seg !== '.');
 
   // Add file segment for non-page files or non-index pages
-  if (fileType !== 'page' || fileName !== 'index') {
+  // For layout files, don't add the filename to the route path
+  if ((fileType !== 'page' || fileName !== 'index') && fileType !== 'layout') {
     pathSegments.push(fileName);
   }
 
@@ -254,8 +256,15 @@ export function validateRoutePath(routePath: string): boolean {
  * Normalize route path
  */
 export function normalizeRoutePath(routePath: string): string {
+  // Remove query parameters first
+  let pathWithoutQuery = routePath;
+  const queryIndex = routePath.indexOf('?');
+  if (queryIndex !== -1) {
+    pathWithoutQuery = routePath.slice(0, queryIndex);
+  }
+
   // Remove leading/trailing slashes and collapse multiple slashes
-  let normalized = routePath.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
+  let normalized = pathWithoutQuery.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
 
   // Add leading slash
   if (normalized && !normalized.startsWith('/')) {

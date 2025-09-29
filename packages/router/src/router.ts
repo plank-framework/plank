@@ -14,6 +14,7 @@ import { discoverRouteFiles } from './route-discovery.js';
 import type {
   LayoutConfig,
   RouteConfig,
+  RouteFileInfo,
   RouteManifest,
   RouteMatch,
   RouterConfig,
@@ -28,6 +29,7 @@ export class FileBasedRouter {
   private layouts: LayoutConfig[] = [];
   private manifest: RouteManifest | null = null;
   private watcher: ReturnType<typeof watch> | null = null;
+  private layoutWatcher: ReturnType<typeof watch> | null = null;
 
   constructor(config: RouterConfig) {
     this.config = config;
@@ -49,15 +51,24 @@ export class FileBasedRouter {
    * Discover routes from file system
    */
   async discoverRoutes(): Promise<void> {
-    // Discover route files
+    // Discover route files from routes directory
     const routeFiles = await discoverRouteFiles(this.config.routesDir, this.config.extensions);
 
-    // Discover layout files
-    const layoutFiles = routeFiles.filter((file) => file.type === 'layout');
+    // Discover layout files from layouts directory (if configured)
+    let layoutFiles: RouteFileInfo[] = [];
+    if (this.config.layoutsDir) {
+      layoutFiles = await discoverRouteFiles(this.config.layoutsDir, this.config.extensions);
+    }
+
+    // Filter files by type
     const pageFiles = routeFiles.filter((file) => file.type === 'page');
+    const allLayoutFiles = [
+      ...layoutFiles.filter((file) => file.type === 'layout'),
+      ...routeFiles.filter((file) => file.type === 'layout')
+    ];
 
     // Build configurations
-    this.layouts = buildLayoutConfig(layoutFiles);
+    this.layouts = buildLayoutConfig(allLayoutFiles);
     this.routes = buildRouteConfig(pageFiles, this.layouts);
 
     // Sort routes by specificity
@@ -179,6 +190,7 @@ export class FileBasedRouter {
       this.watcher.close();
     }
 
+    // Watch routes directory
     this.watcher = watch(
       this.config.routesDir,
       { recursive: true },
@@ -190,6 +202,21 @@ export class FileBasedRouter {
         }
       }
     );
+
+    // Also watch layouts directory if configured
+    if (this.config.layoutsDir) {
+      this.layoutWatcher = watch(
+        this.config.layoutsDir,
+        { recursive: true },
+        async (_eventType, filename) => {
+          if (filename && !filename.startsWith('.')) {
+            console.log(`Layout file changed: ${filename}`);
+            await this.discoverRoutes();
+            await this.generateManifest();
+          }
+        }
+      );
+    }
   }
 
   /**
@@ -199,6 +226,10 @@ export class FileBasedRouter {
     if (this.watcher) {
       this.watcher.close();
       this.watcher = null;
+    }
+    if (this.layoutWatcher) {
+      this.layoutWatcher.close();
+      this.layoutWatcher = null;
     }
   }
 
@@ -217,7 +248,12 @@ export class FileBasedRouter {
 
     // Handle catch-all routes
     if (route.isCatchAll) {
-      return this.extractCatchAllParams(routeSegments, pathSegments);
+      return this.extractCatchAllParams(routeSegments, pathSegments, path);
+    }
+
+    // Handle optional routes - need to align segments properly
+    if (routeSegments.length !== pathSegments.length) {
+      return this.extractOptionalParams(routeSegments, pathSegments);
     }
 
     // Handle regular dynamic routes
@@ -227,7 +263,7 @@ export class FileBasedRouter {
   /**
    * Extract parameters from catch-all routes
    */
-  private extractCatchAllParams(routeSegments: string[], pathSegments: string[]): Record<string, string> {
+  private extractCatchAllParams(routeSegments: string[], pathSegments: string[], originalPath: string): Record<string, string> {
     const params: Record<string, string> = {};
     const catchAllIndex = routeSegments.findIndex(seg => seg.startsWith('[...'));
 
@@ -239,7 +275,7 @@ export class FileBasedRouter {
     for (let i = 0; i < catchAllIndex; i++) {
       const routeSegment = routeSegments[i];
       const pathSegment = pathSegments[i];
-      if (routeSegment && pathSegment) {
+      if (routeSegment && pathSegment && routeSegment.startsWith('[') && routeSegment.endsWith(']')) {
         const extracted = this.extractParameterFromSegment(
           routeSegment,
           pathSegment,
@@ -256,8 +292,70 @@ export class FileBasedRouter {
     const catchAllSegment = routeSegments[catchAllIndex];
     if (catchAllSegment) {
       const catchAllParam = catchAllSegment.slice(4, -1); // Remove [... and ]
-      const catchAllValue = pathSegments.slice(catchAllIndex).join('/');
+      // For catch-all, we need to get the path after the catch-all position
+      // Use the original path to preserve slashes when there are multiple consecutive slashes
+      const routePath = routeSegments.slice(0, catchAllIndex).join('/');
+      let catchAllValue = originalPath.replace(`/${routePath}`, '');
+
+      // Only preserve leading slash if the original path had multiple consecutive slashes
+      if (!originalPath.includes('//')) {
+        catchAllValue = catchAllValue.replace(/^\/+/, '');
+      } else {
+        // For paths with multiple slashes, ensure we have exactly one leading slash
+        catchAllValue = catchAllValue.replace(/^\/+/, '/');
+      }
+
       params[catchAllParam] = catchAllValue;
+    }
+
+    return params;
+  }
+
+  /**
+   * Extract parameters from optional routes
+   */
+  private extractOptionalParams(routeSegments: string[], pathSegments: string[]): Record<string, string> {
+    const params: Record<string, string> = {};
+
+    // Find the optional segment in the route
+    let optionalIndex = -1;
+    for (let i = 0; i < routeSegments.length; i++) {
+      const segment = routeSegments[i];
+      if (segment?.startsWith('[[') && segment.endsWith(']]')) {
+        optionalIndex = i;
+        break;
+      }
+    }
+
+    if (optionalIndex === -1) {
+      return params;
+    }
+
+    // Extract parameters by aligning segments, skipping the optional one
+    let pathIndex = 0;
+    for (let i = 0; i < routeSegments.length; i++) {
+      const routeSegment = routeSegments[i];
+
+      if (i === optionalIndex) {
+        // Skip optional segment - it wasn't provided in the path
+        continue;
+      }
+
+      const pathSegment = pathSegments[pathIndex];
+
+      if (routeSegment?.startsWith('[') && routeSegment.endsWith(']')) {
+        const extracted = this.extractParameterFromSegment(
+          routeSegment,
+          pathSegment,
+          pathSegments,
+          pathIndex
+        );
+        if (extracted) {
+          Object.assign(params, extracted);
+        }
+      }
+
+      pathIndex++;
     }
 
     return params;

@@ -15,9 +15,9 @@ export function buildRouteConfig(
   const routes: RouteConfig[] = [];
   const layoutMap = new Map<string, LayoutConfig>();
 
-  // Build layout map
+  // Build layout map using file path as key for better matching
   for (const layout of layouts) {
-    layoutMap.set(layout.name, layout);
+    layoutMap.set(layout.filePath, layout);
   }
 
   // Group files by route path
@@ -35,7 +35,7 @@ export function buildRouteConfig(
 
   // Build route configurations
   for (const [routePath, routeFiles] of routeGroups) {
-    const routeConfig = buildSingleRouteConfig(routePath, routeFiles, layoutMap);
+    const routeConfig = buildSingleRouteConfig(routePath, routeFiles, layoutMap, layouts);
     if (routeConfig) {
       routes.push(routeConfig);
     }
@@ -45,12 +45,60 @@ export function buildRouteConfig(
 }
 
 /**
+ * Find the most appropriate layout for a route path based on directory structure
+ */
+function findAppropriateLayout(routePath: string, layouts: LayoutConfig[]): string | undefined {
+  // Create a map of layout paths to their directory structure
+  const layoutMap = new Map<string, string[]>();
+
+  for (const layout of layouts) {
+    // Extract the directory path from the layout file path
+    // e.g., "/path/to/layouts/admin/layout.plk" -> ["admin"]
+    const pathParts = layout.filePath.split('/');
+    const layoutsIndex = pathParts.indexOf('layouts');
+    if (layoutsIndex !== -1 && layoutsIndex < pathParts.length - 2) {
+      const layoutDir = pathParts.slice(layoutsIndex + 1, -1); // Get directory path after 'layouts'
+      layoutMap.set(layout.filePath, layoutDir);
+    } else if (layout.isRoot) {
+      // Root layout has no directory path
+      layoutMap.set(layout.filePath, []);
+    }
+  }
+
+  // Walk up the route path to find the most specific matching layout
+  const routeSegments = routePath.split('/').filter(Boolean);
+
+  for (let i = routeSegments.length; i >= 0; i--) {
+    const candidateSegments = routeSegments.slice(0, i);
+
+    // Find layout that matches this directory structure
+    for (const [layoutPath, layoutSegments] of layoutMap) {
+      if (arraysEqual(candidateSegments, layoutSegments)) {
+        return layoutPath;
+      }
+    }
+  }
+
+  // Fallback to root layout if no specific match found
+  const rootLayout = layouts.find(layout => layout.isRoot);
+  return rootLayout?.filePath;
+}
+
+/**
+ * Check if two arrays are equal
+ */
+function arraysEqual(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((val, index) => val === b[index]);
+}
+
+/**
  * Build configuration for a single route
  */
 function buildSingleRouteConfig(
   routePath: string,
   files: RouteFileInfo[],
-  _layoutMap: Map<string, LayoutConfig>
+  _layoutMap: Map<string, LayoutConfig>,
+  layouts: LayoutConfig[]
 ): RouteConfig | null {
   // Find page file
   const pageFile = files.find((f) => f.type === 'page');
@@ -58,9 +106,14 @@ function buildSingleRouteConfig(
     return null;
   }
 
-  // Find layout file
+  // Find layout file in the same directory first
   const layoutFile = files.find((f) => f.type === 'layout');
-  const layoutPath = layoutFile?.path;
+  let layoutPath = layoutFile?.path;
+
+  // If no layout in same directory, find appropriate layout from layouts directory
+  if (!layoutPath && layouts.length > 0) {
+    layoutPath = findAppropriateLayout(routePath, layouts);
+  }
 
   // Extract parameters from the most dynamic file
   const dynamicFile = files.find((f) => f.isDynamic) || pageFile;
@@ -156,10 +209,14 @@ export function buildLayoutConfig(files: RouteFileInfo[]): LayoutConfig[] {
   // First pass: create all layouts
   for (const file of files) {
     if (file.type === 'layout') {
+      // Determine if this is the root layout based on directory structure
+      // Root layout is the one at the root of the layouts directory
+      const isRoot = file.routePath === '/' || file.routePath === '';
+
       const layoutConfig: LayoutConfig = {
         filePath: file.path,
         name: file.name,
-        isRoot: file.routePath === '/',
+        isRoot,
         meta: buildLayoutMeta(file),
       };
 
@@ -323,8 +380,8 @@ function matchesCatchAllRoute(routeSegments: string[], pathSegments: string[]): 
     }
   }
 
-  // Catch-all requires at least one segment after the catch-all position
-  return pathSegments.length > catchAllIndex;
+  // Catch-all allows zero or more segments after the catch-all position
+  return pathSegments.length >= catchAllIndex;
 }
 
 /**
@@ -339,14 +396,22 @@ function matchesOptionalRoute(routeSegments: string[], pathSegments: string[]): 
   const longer = routeSegments.length > pathSegments.length ? routeSegments : pathSegments;
   const shorter = routeSegments.length > pathSegments.length ? pathSegments : routeSegments;
 
-  // Check if the extra segment is optional
-  const extraSegment = longer[longer.length - 1];
-  if (!extraSegment || !extraSegment.startsWith('[[') || !extraSegment.endsWith(']]')) {
+  // Find the optional segment in the longer array
+  let optionalIndex = -1;
+  for (let i = 0; i < longer.length; i++) {
+    const segment = longer[i];
+    if (segment?.startsWith('[[') && segment.endsWith(']]')) {
+      optionalIndex = i;
+      break;
+    }
+  }
+
+  if (optionalIndex === -1) {
     return false;
   }
 
   // Remove the optional segment and check the rest
-  const adjustedRoute = longer.slice(0, -1);
+  const adjustedRoute = longer.filter((_, index) => index !== optionalIndex);
   return matchesRouteSegments(adjustedRoute, shorter);
 }
 

@@ -73,7 +73,8 @@ describe('Plank Vite Plugin', () => {
       resolve: mockResolve,
     };
 
-    const result = await plugin.resolveId?.call(mockThis, 'test.plk', '/app/routes/index.plk');
+    const resolveId = typeof plugin.resolveId === 'function' ? plugin.resolveId : plugin.resolveId?.handler;
+    const result = await resolveId?.call(mockThis, 'test.plk', '/app/routes/index.plk');
 
     // The plugin should return a result
     expect(result).toBeDefined();
@@ -90,7 +91,8 @@ describe('Plank Vite Plugin', () => {
       resolve: mockResolve,
     };
 
-    const result = await plugin.resolveId?.call(
+    const resolveId = typeof plugin.resolveId === 'function' ? plugin.resolveId : plugin.resolveId?.handler;
+    const result = await resolveId?.call(
       mockThis,
       'nonexistent.plk',
       '/app/routes/index.plk'
@@ -124,7 +126,8 @@ describe('Plank Vite Plugin', () => {
       error: mockError,
     };
 
-    const result = await plugin.load?.call(mockThis, '/app/routes/test.plk');
+    const load = typeof plugin.load === 'function' ? plugin.load : plugin.load?.handler;
+    const result = await load?.call(mockThis, '/app/routes/test.plk');
 
     // The plugin should return a result (may be null if file doesn't exist)
     if (result) {
@@ -152,7 +155,8 @@ describe('Plank Vite Plugin', () => {
       error: mockError,
     };
 
-    const result = await plugin.load?.call(mockThis, '/app/routes/test.plk');
+    const load = typeof plugin.load === 'function' ? plugin.load : plugin.load?.handler;
+    const result = await load?.call(mockThis, '/app/routes/test.plk');
 
     expect(mockError).toHaveBeenCalled();
     expect(result).toBeNull();
@@ -173,18 +177,14 @@ describe('Plank Vite Plugin', () => {
       server: mockServer,
     };
 
-    const result = plugin.handleHotUpdate?.(mockCtx);
+    const handleHotUpdate = typeof plugin.handleHotUpdate === 'function' ? plugin.handleHotUpdate : plugin.handleHotUpdate?.handler;
+    // biome-ignore lint/suspicious/noExplicitAny: Test mock context
+    const result = (handleHotUpdate as any)?.(mockCtx);
 
+    // .plk files trigger full page reload (server-rendered templates)
     expect(mockSend).toHaveBeenCalledWith({
-      type: 'update',
-      updates: [
-        {
-          type: 'js-update',
-          path: '/app/routes/test.plk',
-          timestamp: expect.any(Number),
-          acceptedPath: '/app/routes/test.plk',
-        },
-      ],
+      type: 'full-reload',
+      path: '*',
     });
     expect(result).toEqual([]);
   });
@@ -204,7 +204,9 @@ describe('Plank Vite Plugin', () => {
       server: mockServer,
     };
 
-    const result = plugin.handleHotUpdate?.(mockCtx);
+    const handleHotUpdate = typeof plugin.handleHotUpdate === 'function' ? plugin.handleHotUpdate : plugin.handleHotUpdate?.handler;
+    // biome-ignore lint/suspicious/noExplicitAny: Test mock context
+    const result = (handleHotUpdate as any)?.(mockCtx);
 
     expect(mockSend).not.toHaveBeenCalled();
     expect(result).toBeUndefined();
@@ -219,7 +221,8 @@ describe('Plank Vite Plugin', () => {
       // Add mock methods that would be called
     };
 
-    plugin.buildStart?.call(pluginInstance);
+    const buildStart = typeof plugin.buildStart === 'function' ? plugin.buildStart : plugin.buildStart?.handler;
+    buildStart?.call(pluginInstance);
 
     // Since we can't directly test the internal state,
     // we just verify the method exists and can be called

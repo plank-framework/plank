@@ -53,7 +53,7 @@ describe('Code Generation', () => {
 
     expect(result.code).toContain('addEventListener');
     expect(result.code).toContain('bindProperty');
-    expect(result.code).toContain('if ({isVisible})');
+    expect(result.code).toContain('if (isVisible)');
     // CodegenResult doesn't have errors property
   });
 
@@ -216,9 +216,8 @@ describe('Code Generation', () => {
     expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
     expect(result.code).toContain('addEventListener');
     expect(result.code).toContain('bindProperty');
-    expect(result.code).toContain('if ({isVisible})');
-    // x:for directive is not generating the expected loop code yet
-    // expect(result.code).toContain('for (const item of items)');
+    expect(result.code).toContain('if (isVisible)');
+    expect(result.code).toContain('for (const item of items)');
     expect(result.code).toContain('data-island');
     expect(result.islands).toContain('./Counter.plk');
     expect(result.scripts).toHaveLength(1);
@@ -264,13 +263,13 @@ describe('Code Generation', () => {
     const result = generateCode(parseResult, { target: 'client' });
 
     expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
-    expect(result.code).toContain('if ({isVisible})');
-    expect(result.code).toContain('addEventListener("click", {handleClick})');
+    expect(result.code).toContain('if (isVisible)');
+    expect(result.code).toContain('addEventListener("click", handleClick)');
     expect(result.code).toContain('bindClass(');
-    expect(result.code).toContain('"active", {isActive}');
-    expect(result.code).toContain('"disabled", {isDisabled}');
+    expect(result.code).toContain('"active", isActive)');
+    expect(result.code).toContain('"disabled", isDisabled)');
     expect(result.code).toContain('bindAttribute(');
-    expect(result.code).toContain('"data-id", {buttonId}');
+    expect(result.code).toContain('"data-id", buttonId)');
     expect(result.dependencies).toHaveLength(1);
     expect(result.islands).toHaveLength(0);
     expect(result.actions).toHaveLength(0);
@@ -408,6 +407,47 @@ describe('Code Generation', () => {
 
     expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
     expect(result.code).toContain('export function render(context = {})');
+    expect(result.dependencies).toHaveLength(1);
+    expect(result.islands).toHaveLength(0);
+    expect(result.actions).toHaveLength(0);
+  });
+
+  it('should handle x:for directive with proper element cloning', () => {
+    const source = `
+      <div>
+        <ul>
+          <li x:for={item of items} x:key={item.id}>
+            {item.name}
+          </li>
+        </ul>
+      </div>
+    `;
+
+    const parseResult = parse(source);
+    const result = generateCode(parseResult, { target: 'client' });
+
+    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain('for (const item of items)');
+    expect(result.code).toContain('document.createElement("li")');
+    expect(result.code).toContain('data-key');
+    expect(result.code).toContain('item.id');
+    expect(result.dependencies).toHaveLength(1);
+    expect(result.islands).toHaveLength(0);
+    expect(result.actions).toHaveLength(0);
+  });
+
+  it('should handle x:for without x:key', () => {
+    const source = `
+      <div>
+        <span x:for={num of numbers}>{num}</span>
+      </div>
+    `;
+
+    const parseResult = parse(source);
+    const result = generateCode(parseResult, { target: 'client' });
+
+    expect(result.code).toContain('for (const num of numbers)');
+    expect(result.code).toContain('document.createElement("span")');
     expect(result.dependencies).toHaveLength(1);
     expect(result.islands).toHaveLength(0);
     expect(result.actions).toHaveLength(0);

@@ -58,8 +58,12 @@ export class HybridHTMLParser {
     this.scripts = [];
 
     try {
-      // Step 1: Parse HTML structure with htmlparser2
-      const htmlAst = parseDocument(this.source, {
+      // Step 1: Preprocess curly brace attributes to quoted attributes
+      // htmlparser2 doesn't handle attr={value with spaces} correctly
+      const preprocessedSource = this.preprocessCurlyBraceAttributes(this.source);
+
+      // Step 2: Parse HTML structure with htmlparser2
+      const htmlAst = parseDocument(preprocessedSource, {
         lowerCaseTags: false,
         lowerCaseAttributeNames: false,
         withStartIndices: true,
@@ -67,7 +71,7 @@ export class HybridHTMLParser {
         decodeEntities: true,
       });
 
-      // Step 2: Transform to Plank AST
+      // Step 3: Transform to Plank AST
       const plankAst = this.transformToPlankAST(htmlAst);
 
       return {
@@ -83,6 +87,24 @@ export class HybridHTMLParser {
         errors: this.errors,
       };
     }
+  }
+
+  /**
+   * Preprocess curly brace attributes to quoted attributes
+   * Converts attr={value} to attr="{value}" so htmlparser2 can handle them
+   */
+  private preprocessCurlyBraceAttributes(source: string): string {
+    // Match directive attributes with curly braces: attr:name={value}
+    // This regex matches:
+    // - Directive name (on:, bind:, x:, class:, attr:, use:, client:)
+    // - Equals sign
+    // - Opening curly brace
+    // - Value (anything except closing brace)
+    // - Closing curly brace
+    return source.replace(
+      /([a-zA-Z][a-zA-Z0-9]*:[a-zA-Z][a-zA-Z0-9-]*)=\{([^}]+)\}/g,
+      '$1="{$2}"'
+    );
   }
 
   /**

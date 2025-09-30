@@ -78,14 +78,19 @@
     </div>
 
     <div style="margin-top: 3rem; text-align: center; padding: 2rem; background: #f9fafb; border-radius: 0.5rem;">
-      <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Learn More About Islands</h3>
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Explore More</h3>
       <p style="color: #6b7280; margin-bottom: 1.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-        Discover how islands architecture can help you build faster, more performant web applications
+        Discover how islands architecture and template directives can help you build faster, more performant web applications
         with minimal JavaScript overhead.
       </p>
-      <a href="/about" style="background: #2563eb; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">
-        About Islands Architecture →
-      </a>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/about" style="background: #2563eb; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">
+          About Islands →
+        </a>
+        <a href="/directives" style="background: #8b5cf6; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">
+          Try Directives →
+        </a>
+      </div>
     </div>
   </div>
 </section>

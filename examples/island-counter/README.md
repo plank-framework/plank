@@ -26,6 +26,104 @@ This example demonstrates Plank's **islands architecture** with interactive comp
 - **Use Case**: Below-the-fold content like charts or interactive visualizations
 - **Features**: Interactive bar chart with click-to-highlight and data manipulation
 
+## Template Directives
+
+The directives page demonstrates all core Plank template directives with **automatic compilation** - you write directives in your templates, and Plank auto-generates the mount function!
+
+### Event Handlers (`on:*`)
+```plk
+<script type="client">
+import { signal } from '@plank/runtime-core';
+
+export const count = signal(0);
+export function handleClick() {
+  count(count() + 1);
+}
+</script>
+
+<button on:click={handleClick}>Click Me!</button>
+<p>Clicks: {count()}</p>
+```
+Attach event listeners to elements. Plank automatically generates `bindEvent` calls in the mount function.
+
+### Two-way Binding (`bind:*`)
+```plk
+<script type="client">
+import { signal } from '@plank/runtime-core';
+
+export const username = signal('');
+</script>
+
+<input bind:value={username} type="text" />
+<p>Hello, {username() || 'Stranger'}!</p>
+```
+Create reactive two-way data bindings. Plank uses `bindInputValue` for text inputs and `bindCheckbox` for checkboxes.
+
+### Conditional Rendering (`x:if`)
+```plk
+<script type="client">
+import { signal } from '@plank/runtime-core';
+
+export const isVisible = signal(false);
+</script>
+
+<input bind:value={isVisible} type="checkbox" />
+<div x:if={isVisible()}>
+  <p>This content is conditionally rendered!</p>
+</div>
+```
+Show or hide elements based on boolean conditions using reactive effects.
+
+### Dynamic Classes (`class:*`)
+```plk
+<script type="client">
+import { signal } from '@plank/runtime-core';
+
+export const activeButton = signal('primary');
+</script>
+
+<button class:active={activeButton() === 'primary'} on:click={() => setActive('primary')}>
+  Primary
+</button>
+```
+Toggle CSS classes dynamically using `bindClass` with computed expressions.
+
+### List Rendering (`x:for`)
+```html
+<ul>
+  <li x:for={todo of todos} x:key={todo.id}>
+    {todo.text}
+  </li>
+</ul>
+```
+Efficiently render lists with proper element cloning and keying (coming soon).
+
+## How It Works: Automatic Directive Compilation
+
+Plank's dev server automatically compiles directives into efficient runtime bindings. When you write:
+
+```plk
+<button on:click={handleClick}>Click</button>
+<input bind:value={username} />
+<div class:active={isActive()}>Content</div>
+```
+
+Plank generates:
+```js
+export function mount(element, props = {}) {
+  const effects = [];
+
+  // Auto-generated bindings using runtime utilities
+  effects.push(bindEvent(element.querySelectorAll('button')[0], 'click', handleClick));
+  effects.push(bindInputValue(element.querySelectorAll('input')[0], username));
+  effects.push(bindClass(element.querySelectorAll('div')[0], 'active', computed(() => isActive())));
+
+  return { unmount: () => effects.forEach(e => e?.stop?.()) };
+}
+```
+
+**No manual DOM manipulation needed!** Just write declarative directives.
+
 ## Loading Strategies
 
 ```html
@@ -64,6 +162,7 @@ app/
 
 - **Home (/)** - Interactive demos showing all three island loading strategies in action
 - **About (/about)** - Comprehensive guide to islands architecture, benefits, and use cases
+- **Directives (/directives)** - Interactive examples demonstrating all core template directives
 
 ## Architecture
 

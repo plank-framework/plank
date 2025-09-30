@@ -184,6 +184,7 @@
         <ul class="nav-links">
           <li><a href="/">Home</a></li>
           <li><a href="/about">About Islands</a></li>
+          <li><a href="/directives">Directives</a></li>
         </ul>
       </nav>
     </div>

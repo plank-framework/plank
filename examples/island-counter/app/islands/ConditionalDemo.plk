@@ -1,0 +1,17 @@
+<script type="client">
+import { signal } from '@plank/runtime-core';
+
+export const isVisible = signal(false);
+</script>
+
+<div style="background: white; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+  <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; margin-bottom: 1rem;">
+    <input bind:value={isVisible} type="checkbox" style="width: 1.25rem; height: 1.25rem;" />
+    <span style="color: #92400e; font-weight: 500;">Show content</span>
+  </label>
+
+  <div x:if={isVisible()} style="background: #fef3c7; border: 2px solid #f59e0b; padding: 1rem; border-radius: 0.5rem;">
+    <p style="color: #92400e; font-weight: 600;">🎉 This content is conditionally rendered!</p>
+    <p style="color: #b45309; margin-top: 0.5rem;">It only appears when the checkbox is checked.</p>
+  </div>
+</div>

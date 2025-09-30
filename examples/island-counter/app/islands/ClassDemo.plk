@@ -1,0 +1,47 @@
+<script type="client">
+import { signal } from '@plank/runtime-core';
+
+export const activeButton = signal('primary');
+
+export function setActive(value) {
+  activeButton(value);
+}
+</script>
+
+<style>
+  .toggle-button {
+    background: #e5e7eb;
+    color: #374151;
+    border: 2px solid transparent;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .toggle-button.active {
+    background: #8b5cf6;
+    color: white;
+    border-color: #7c3aed;
+    transform: scale(1.05);
+  }
+</style>
+
+<div style="background: white; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+  <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+    <button class="toggle-button" class:active={activeButton() === 'primary'} on:click={() => setActive('primary')}>
+      Primary
+    </button>
+    <button class="toggle-button" class:active={activeButton() === 'secondary'} on:click={() => setActive('secondary')}>
+      Secondary
+    </button>
+    <button class="toggle-button" class:active={activeButton() === 'tertiary'} on:click={() => setActive('tertiary')}>
+      Tertiary
+    </button>
+  </div>
+
+  <p style="color: #5b21b6;">
+    Active button: <span style="font-weight: bold; color: #8b5cf6;">{activeButton()}</span>
+  </p>
+</div>

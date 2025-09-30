@@ -171,7 +171,7 @@ class CodeGenerator {
         this.generateTemplateCode(node);
         break;
       case 'element':
-        this.generateElementCode(node);
+        this.generateElementCode(node, 'container');
         break;
       case 'text':
         this.generateTextCode(node);
@@ -196,11 +196,16 @@ class CodeGenerator {
     }
   }
 
-  private generateElementCode(node: TemplateNode): void {
+  private generateElementCode(node: TemplateNode, parentVar = 'container'): string {
     // Check if this is an island element
     if (node.tag === 'island') {
       this.generateIslandCode(node);
-      return;
+      return '';
+    }
+
+    // Check if element has x:for directive - handle differently
+    if (node.attributes?.['x:for']) {
+      return this.generateForLoopElement(node, parentVar);
     }
 
     const elementVar = `element_${Math.random().toString(36).substr(2, 9)}`;
@@ -220,12 +225,34 @@ class CodeGenerator {
     // Generate children
     if (node.children) {
       for (const child of node.children) {
-        this.generateNodeCode(child);
-        this.addLine(`${elementVar}.appendChild(child);`);
+        const childVar = this.generateNodeCodeWithReturn(child, elementVar);
+        if (childVar) {
+          this.addLine(`${elementVar}.appendChild(${childVar});`);
+        }
       }
     }
 
-    this.addLine(`container.appendChild(${elementVar});`);
+    this.addLine(`${parentVar}.appendChild(${elementVar});`);
+    return elementVar;
+  }
+
+  private generateNodeCodeWithReturn(node: TemplateNode, parentVar: string): string {
+    switch (node.type) {
+      case 'element':
+        return this.generateElementCode(node, parentVar);
+      case 'text':
+        return this.generateTextCodeWithReturn(node, parentVar);
+      default:
+        this.generateNodeCode(node);
+        return '';
+    }
+  }
+
+  private generateTextCodeWithReturn(node: TemplateNode, _parentVar: string): string {
+    const textVar = `textNode_${Math.random().toString(36).substr(2, 9)}`;
+    const text = (node.text || '').replace(/"/g, '\\"');
+    this.addLine(`const ${textVar} = document.createTextNode("${text}");`);
+    return textVar;
   }
 
   private generateTextCode(node: TemplateNode): void {
@@ -335,57 +362,150 @@ class CodeGenerator {
   }
 
   private generateDirectiveBinding(elementVar: string, name: string, value: string): void {
+    // Strip curly braces from expression values
+    const cleanValue = value.replace(/^{|}$/g, '').trim();
+
     if (name.startsWith('on:')) {
-      const eventName = name.slice(3);
-      this.addLine(`${elementVar}.addEventListener("${eventName}", ${value});`);
+      this.generateEventDirective(elementVar, name, cleanValue);
     } else if (name.startsWith('bind:')) {
-      const property = name.slice(5);
-      this.addLine(`bindProperty(${elementVar}, "${property}", ${value});`);
+      this.generateBindDirective(elementVar, name, cleanValue);
     } else if (name.startsWith('class:')) {
-      const className = name.slice(6);
-      this.addLine(`bindClass(${elementVar}, "${className}", ${value});`);
+      this.generateClassDirective(elementVar, name, cleanValue);
     } else if (name.startsWith('attr:')) {
-      const attrName = name.slice(5);
-      this.addLine(`bindAttribute(${elementVar}, "${attrName}", ${value});`);
+      this.generateAttrDirective(elementVar, name, cleanValue);
     } else if (name === 'x:if') {
-      this.addLine(`if (${value}) {`);
-      this.indentLevel++;
-      this.addLine(`container.appendChild(${elementVar});`);
-      this.indentLevel--;
-      this.addLine('}');
+      this.generateIfDirective(elementVar, cleanValue);
     } else if (name === 'x:show') {
-      this.addLine(`if (${value}) {`);
-      this.indentLevel++;
-      this.addLine(`${elementVar}.style.display = "block";`);
-      this.indentLevel--;
-      this.addLine('} else {');
-      this.indentLevel++;
-      this.addLine(`${elementVar}.style.display = "none";`);
-      this.indentLevel--;
-      this.addLine('}');
-    } else if (name === 'x:for') {
-      this.generateForLoop(elementVar, value);
+      this.generateShowDirective(elementVar, cleanValue);
+    } else if (name === 'x:for' || name === 'x:key') {
+      // x:for and x:key are handled at element level in generateForLoopElement
+      return;
     } else if (name === 'use:action') {
-      // Extract action name from value (remove curly braces if present)
-      const actionName = value.replace(/[{}]/g, '');
-      this.actions.add(actionName);
-      this.addLine(`${elementVar}.setAttribute("data-action", "${actionName}");`);
+      this.generateActionDirective(elementVar, cleanValue);
     } else if (name.startsWith('client:')) {
       // Island loading strategy - handled in island generation
       return;
     }
   }
 
-  private generateForLoop(elementVar: string, value: string): void {
+  private generateEventDirective(elementVar: string, name: string, cleanValue: string): void {
+    const eventName = name.slice(3);
+    this.addLine(`${elementVar}.addEventListener("${eventName}", ${cleanValue});`);
+  }
+
+  private generateBindDirective(elementVar: string, name: string, cleanValue: string): void {
+    const property = name.slice(5);
+    this.addLine(`bindProperty(${elementVar}, "${property}", ${cleanValue});`);
+  }
+
+  private generateClassDirective(elementVar: string, name: string, cleanValue: string): void {
+    const className = name.slice(6);
+    this.addLine(`bindClass(${elementVar}, "${className}", ${cleanValue});`);
+  }
+
+  private generateAttrDirective(elementVar: string, name: string, cleanValue: string): void {
+    const attrName = name.slice(5);
+    this.addLine(`bindAttribute(${elementVar}, "${attrName}", ${cleanValue});`);
+  }
+
+  private generateIfDirective(elementVar: string, cleanValue: string): void {
+    this.addLine(`if (${cleanValue}) {`);
+    this.indentLevel++;
+    this.addLine(`container.appendChild(${elementVar});`);
+    this.indentLevel--;
+    this.addLine('}');
+  }
+
+  private generateShowDirective(elementVar: string, cleanValue: string): void {
+    this.addLine(`if (${cleanValue}) {`);
+    this.indentLevel++;
+    this.addLine(`${elementVar}.style.display = "block";`);
+    this.indentLevel--;
+    this.addLine('} else {');
+    this.indentLevel++;
+    this.addLine(`${elementVar}.style.display = "none";`);
+    this.indentLevel--;
+    this.addLine('}');
+  }
+
+  private generateActionDirective(elementVar: string, cleanValue: string): void {
+    this.actions.add(cleanValue);
+    this.addLine(`${elementVar}.setAttribute("data-action", "${cleanValue}");`);
+  }
+
+  private generateForLoopElement(node: TemplateNode, parentVar: string): string {
     // Parse x:for="item of items" syntax
-    const match = value.match(/^(\w+)\s+of\s+(\w+)$/);
-    if (match) {
-      const [, itemVar, itemsVar] = match;
-      this.addLine(`for (const ${itemVar} of ${itemsVar}) {`);
-      this.indentLevel++;
-      this.addLine(`container.appendChild(${elementVar});`);
-      this.indentLevel--;
-      this.addLine('}');
+    const forValue = node.attributes?.['x:for'];
+    if (!forValue) return '';
+
+    const cleanValue = forValue.replace(/^{|}$/g, '').trim();
+    const match = cleanValue.match(/^(\w+)\s+of\s+(\w+)$/);
+    if (!match) return '';
+
+    const [, itemVar, itemsVar] = match;
+
+    // Generate the loop
+    this.addLine(`for (const ${itemVar} of ${itemsVar}) {`);
+    this.indentLevel++;
+
+    // Create element and generate its content
+    this.generateForLoopElementContent(node, parentVar);
+
+    this.indentLevel--;
+    this.addLine('}');
+
+    return '';
+  }
+
+  private generateForLoopElementContent(node: TemplateNode, parentVar: string): string {
+    // Create element inside the loop (fresh for each iteration)
+    const elementVar = `element_${Math.random().toString(36).substr(2, 9)}`;
+    this.addLine(`const ${elementVar} = document.createElement("${node.tag}");`);
+
+    // Generate attributes and key
+    this.generateForLoopElementAttributes(node, elementVar);
+
+    // Generate children inside the loop
+    this.generateForLoopElementChildren(node, elementVar);
+
+    // Append the element to parent
+    this.addLine(`${parentVar}.appendChild(${elementVar});`);
+
+    return elementVar;
+  }
+
+  private generateForLoopElementAttributes(node: TemplateNode, elementVar: string): void {
+    const keyValue = node.attributes?.['x:key'];
+
+    // Generate attributes (excluding x:for and x:key)
+    if (node.attributes) {
+      for (const [name, value] of Object.entries(node.attributes)) {
+        if (name === 'x:for' || name === 'x:key') {
+          continue; // Skip loop directives
+        }
+        if (this.isDirective(name)) {
+          this.generateDirectiveBinding(elementVar, name, value);
+        } else {
+          this.addLine(`${elementVar}.setAttribute("${name}", "${value}");`);
+        }
+      }
+    }
+
+    // Add key attribute if present for efficient updates
+    if (keyValue) {
+      const cleanKeyValue = keyValue.replace(/^{|}$/g, '').trim();
+      this.addLine(`${elementVar}.setAttribute("data-key", ${cleanKeyValue});`);
+    }
+  }
+
+  private generateForLoopElementChildren(node: TemplateNode, elementVar: string): void {
+    if (node.children) {
+      for (const child of node.children) {
+        const childVar = this.generateNodeCodeWithReturn(child, elementVar);
+        if (childVar) {
+          this.addLine(`${elementVar}.appendChild(${childVar});`);
+        }
+      }
     }
   }
 

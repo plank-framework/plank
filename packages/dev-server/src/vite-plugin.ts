@@ -362,7 +362,7 @@ function extractScriptContent(script: unknown): string | null {
 }
 
 /**
- * Generate island component module
+ * Generate island component module with auto-compiled directives
  */
 function generateIslandModule(
   result: {
@@ -385,9 +385,12 @@ function generateIslandModule(
 
   const dependenciesCode = generateDependenciesSection(dependencies, options);
   const scriptsCode = generateScriptsSection(scripts);
+  const mountCode = generateMountFunction(originalContent, scripts);
 
-  return `${dependenciesCode}${scriptsCode}// Island template
+  const finalCode = `${dependenciesCode}${scriptsCode}// Island template
 const template = ${JSON.stringify(htmlContent)};
+
+${mountCode}
 
 // Default export
 export default {
@@ -395,17 +398,390 @@ export default {
   template,
 };
 `;
+
+  // Debug: Log generated code in development
+  if (process.env.DEBUG_PLANK) {
+    console.log('=== Generated Island Module ===');
+    console.log(finalCode);
+    console.log('=== End Generated Module ===');
+  }
+
+  return finalCode;
 }
 
 /**
- * Extract HTML content from a .plk file by removing script tags
+ * Determine required imports for directives
+ */
+function getRequiredImports(
+  directives: Array<{ type: string; isCheckbox?: boolean }>,
+  textBindings: Array<unknown>
+): { runtimeDom: Set<string>; runtimeCore: Set<string> } {
+  const runtimeDomImports = new Set<string>();
+  const runtimeCoreImports = new Set<string>();
+
+  for (const directive of directives) {
+    if (directive.type === 'on') runtimeDomImports.add('bindEvent');
+    if (directive.type === 'bind') {
+      if (directive.isCheckbox) {
+        runtimeDomImports.add('bindCheckbox');
+      } else {
+        runtimeDomImports.add('bindInputValue');
+      }
+    }
+    if (directive.type === 'class') {
+      runtimeDomImports.add('bindClass');
+      runtimeCoreImports.add('computed');
+    }
+    if (directive.type === 'x:if') runtimeCoreImports.add('effect');
+  }
+
+  if (textBindings.length > 0) {
+    runtimeDomImports.add('bindText');
+    runtimeCoreImports.add('computed');
+  }
+
+  return { runtimeDom: runtimeDomImports, runtimeCore: runtimeCoreImports };
+}
+
+/**
+ * Generate import statements for mount function
+ */
+function generateImportStatements(
+  runtimeCoreImports: Set<string>,
+  runtimeDomImports: Set<string>
+): string[] {
+  const lines: string[] = [];
+
+  if (runtimeCoreImports.size > 0) {
+    lines.push(
+      `import { ${Array.from(runtimeCoreImports).join(', ')} } from '@plank/runtime-core';`
+    );
+  }
+
+  if (runtimeDomImports.size > 0) {
+    lines.push(
+      `import { ${Array.from(runtimeDomImports).join(', ')} } from '@plank/runtime-dom';`
+    );
+  }
+
+  if (runtimeCoreImports.size > 0 || runtimeDomImports.size > 0) {
+    lines.push('');
+  }
+
+  return lines;
+}
+
+/**
+ * Generate mount function from template directives using runtime bindings
+ */
+function generateMountFunction(content: string, _scripts: unknown[]): string {
+  // IMPORTANT: Extract directives BEFORE stripping them from HTML!
+  const htmlWithDirectives = content
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
+  const directives = extractDirectivesFromHTML(htmlWithDirectives);
+  const textBindings = extractTextInterpolations(htmlWithDirectives);
+
+  const lines: string[] = [];
+
+  // Determine what imports we need
+  const needsBindings = directives.length > 0 || textBindings.length > 0;
+
+  if (needsBindings) {
+    const { runtimeDom, runtimeCore } = getRequiredImports(directives, textBindings);
+    const importLines = generateImportStatements(runtimeCore, runtimeDom);
+    lines.push(...importLines);
+  }
+
+  lines.push('// Auto-generated mount function from directives');
+  lines.push('export function mount(element, props = {}) {');
+  lines.push('  const effects = [];');
+  lines.push('');
+
+  // Generate bindings using runtime utilities
+  const bindingCode = generateRuntimeBindings(directives);
+  if (bindingCode) {
+    lines.push(bindingCode);
+  }
+
+  // Generate text interpolation bindings
+  const textBindingCode = generateRuntimeTextBindings(textBindings);
+  if (textBindingCode) {
+    lines.push(textBindingCode);
+  }
+
+  lines.push('');
+  lines.push('  return {');
+  lines.push('    unmount: () => {');
+  lines.push('      effects.forEach(e => e?.stop?.());');
+  lines.push('    }');
+  lines.push('  };');
+  lines.push('}');
+
+  return lines.join('\n');
+}
+
+/**
+ * Parse directive matches from element attributes
+ */
+function parseDirectiveMatches(attrs: string) {
+  return {
+    on: attrs.match(/on:(\w+)=\{([^}]+)\}/),
+    bind: attrs.match(/bind:(\w+)=\{([^}]+)\}/),
+    class: attrs.match(/class:(\w+)=\{([^}]+)\}/),
+    xIf: attrs.match(/x:if=\{([^}]+)\}/),
+    xFor: attrs.match(/x:for=\{([^}]+)\}/),
+  };
+}
+
+/**
+ * Add directive to array if match exists
+ */
+function addDirectiveIfMatched(
+  directives: Array<{
+    type: string;
+    selector: string;
+    attribute: string;
+    value: string;
+    isCheckbox?: boolean;
+    index: number;
+  }>,
+  matches: ReturnType<typeof parseDirectiveMatches>,
+  tag: string,
+  attrs: string,
+  index: number
+): void {
+  const { on, bind, class: cls, xIf, xFor } = matches;
+
+  if (on?.[1] && on[2]) {
+    directives.push({ type: 'on', selector: tag, attribute: on[1], value: on[2], index });
+  }
+
+  if (bind?.[1] && bind[2]) {
+    const isCheckbox = attrs.includes('type="checkbox"');
+    directives.push({ type: 'bind', selector: tag, attribute: bind[1], value: bind[2], isCheckbox, index });
+  }
+
+  if (cls?.[1] && cls[2]) {
+    directives.push({ type: 'class', selector: tag, attribute: cls[1], value: cls[2], index });
+  }
+
+  if (xIf?.[1]) {
+    directives.push({ type: 'x:if', selector: tag, attribute: 'if', value: xIf[1], index });
+  }
+
+  if (xFor?.[1]) {
+    directives.push({ type: 'x:for', selector: tag, attribute: 'for', value: xFor[1], index });
+  }
+}
+
+/**
+ * Extract directives from HTML content using index-based tracking
+ */
+function extractDirectivesFromHTML(html: string): Array<{
+  type: string;
+  selector: string;
+  attribute: string;
+  value: string;
+  isCheckbox?: boolean;
+  index: number;
+}> {
+  const directives: Array<{
+    type: string;
+    selector: string;
+    attribute: string;
+    value: string;
+    isCheckbox?: boolean;
+    index: number;
+  }> = [];
+
+  const elementRegex = /<(\w+)([^>]*?)>/g;
+  let match: RegExpExecArray | null = elementRegex.exec(html);
+  let directiveElementIndex = 0;
+
+  while (match !== null) {
+    const tag = match[1];
+    const attrs = match[2];
+
+    if (!tag || !attrs) {
+      match = elementRegex.exec(html);
+      continue;
+    }
+
+    const matches = parseDirectiveMatches(attrs);
+    const hasDirectives = matches.on || matches.bind || matches.class || matches.xIf || matches.xFor;
+
+    if (hasDirectives) {
+      addDirectiveIfMatched(directives, matches, tag, attrs, directiveElementIndex);
+      directiveElementIndex++;
+    }
+
+    match = elementRegex.exec(html);
+  }
+
+  return directives;
+}
+
+/**
+ * Extract text interpolations from HTML
+ */
+function extractTextInterpolations(html: string): Array<{
+  selector: string;
+  expression: string;
+}> {
+  const interpolations: Array<{
+    selector: string;
+    expression: string;
+  }> = [];
+
+  // Match text content with interpolations like {clickCount()} or {username() || 'Stranger'}
+  const textRegex = /<span[^>]*>([^<]*\{[^}]+\}[^<]*)<\/span>/g;
+  let match: RegExpExecArray | null = textRegex.exec(html);
+  let spanIndex = 0;
+
+  while (match !== null) {
+    const textContent = match[1];
+    const interpolationMatch = textContent?.match(/\{([^}]+)\}/);
+
+    if (interpolationMatch?.[1]) {
+      const expression = interpolationMatch[1];
+
+      // Try to find a class for better selection
+      const fullMatch = match[0];
+      const classMatch = fullMatch?.match(/class="([^"]+)"/);
+      const className = classMatch?.[1]?.split(' ')[0];
+
+      const selector = className ? `.${className}` : `span:nth-of-type(${spanIndex + 1})`;
+
+      interpolations.push({
+        selector,
+        expression,
+      });
+    }
+
+    spanIndex++;
+    match = textRegex.exec(html);
+  }
+
+  return interpolations;
+}
+
+/**
+ * Generate text binding code using runtime utilities
+ */
+function generateRuntimeTextBindings(
+  bindings: Array<{
+    selector: string;
+    expression: string;
+  }>
+): string {
+  if (bindings.length === 0) return '';
+
+  const lines: string[] = [];
+  lines.push('  // Text interpolation bindings');
+
+  for (const binding of bindings) {
+    lines.push(`  {`);
+    lines.push(`    const el = element.querySelector('${binding.selector}');`);
+    lines.push(`    if (el) {`);
+    lines.push(`      effects.push(bindText(el, computed(() => String(${binding.expression}))));`);
+    lines.push(`    }`);
+    lines.push(`  }`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Generate binding code for directives using runtime utilities
+ */
+function generateRuntimeBindings(
+  directives: Array<{
+    type: string;
+    selector: string;
+    attribute: string;
+    value: string;
+    isCheckbox?: boolean;
+    index: number;
+  }>
+): string {
+  if (directives.length === 0) return '';
+
+  const lines: string[] = [];
+  lines.push('  // Setup directive bindings');
+
+  for (const directive of directives) {
+    const { type, selector, attribute, value, isCheckbox, index } = directive;
+
+    if (type === 'on') {
+      // Event handlers using bindEvent
+      lines.push(`  {`);
+      lines.push(`    const el = element.querySelectorAll('${selector}')[${index}];`);
+      lines.push(`    if (el) {`);
+      lines.push(`      effects.push(bindEvent(el, '${attribute}', ${value}));`);
+      lines.push(`    }`);
+      lines.push(`  }`);
+    } else if (type === 'bind') {
+      // Two-way bindings using bindCheckbox or bindInputValue
+      if (isCheckbox) {
+        lines.push(`  {`);
+        lines.push(`    const el = element.querySelectorAll('${selector}')[${index}];`);
+        lines.push(`    if (el) {`);
+        lines.push(`      effects.push(bindCheckbox(el, ${value}));`);
+        lines.push(`    }`);
+        lines.push(`  }`);
+      } else {
+        lines.push(`  {`);
+        lines.push(`    const el = element.querySelectorAll('${selector}')[${index}];`);
+        lines.push(`    if (el) {`);
+        lines.push(`      effects.push(bindInputValue(el, ${value}));`);
+        lines.push(`    }`);
+        lines.push(`  }`);
+      }
+    } else if (type === 'class') {
+      // Class bindings using bindClass with computed
+      lines.push(`  {`);
+      lines.push(`    const el = element.querySelectorAll('${selector}')[${index}];`);
+      lines.push(`    if (el) {`);
+      lines.push(
+        `      effects.push(bindClass(el, '${attribute}', computed(() => Boolean(${value}))));`
+      );
+      lines.push(`    }`);
+      lines.push(`  }`);
+    } else if (type === 'x:if') {
+      // Conditional rendering using effect and style.display
+      lines.push(`  {`);
+      lines.push(`    const el = element.querySelectorAll('${selector}')[${index}];`);
+      lines.push(`    if (el) {`);
+      lines.push(`      effects.push(effect(() => {`);
+      lines.push(`        const shouldShow = ${value};`);
+      lines.push(`        el.style.display = shouldShow ? '' : 'none';`);
+      lines.push(`      }));`);
+      lines.push(`    }`);
+      lines.push(`  }`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Extract HTML content from a .plk file by removing script tags and directives
  */
 function extractHTMLFromPlk(content: string): string {
   // Remove script tags and their content
-  const withoutScripts = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  let html = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+
+  // Remove style tags and their content
+  html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
+  // Remove directive attributes - match from directive to next space or >
+  // This handles complex expressions like {todos().length === 0}
+  html = html.replace(/\s+(on|bind|class|attr|x|use|client):[\w-]+=[^\s>]+/gi, '');
 
   // Clean up any remaining script-related content and return the HTML
-  return withoutScripts.trim();
+  return html.trim();
 }
 
 /**

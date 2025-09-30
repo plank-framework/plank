@@ -1,0 +1,45 @@
+<script type="client">
+import { signal } from '@plank/runtime-core';
+
+export const todos = signal([
+  { id: 1, text: 'Learn Plank directives' },
+  { id: 2, text: 'Build amazing apps' }
+]);
+
+export const newTodo = signal('');
+let todoId = 3;
+
+export function addTodo() {
+  const text = newTodo();
+  if (text.trim()) {
+    todos([...todos(), { id: todoId++, text }]);
+    newTodo('');
+  }
+}
+
+export function removeTodo(id) {
+  todos(todos().filter(todo => todo.id !== id));
+}
+</script>
+
+<div style="background: white; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+  <div style="margin-bottom: 1rem;">
+    <input bind:value={newTodo} type="text" placeholder="Add a new task" style="width: calc(100% - 100px); padding: 0.75rem; border: 2px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" />
+    <button on:click={addTodo} style="background: #ec4899; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; margin-left: 0.5rem;">
+      Add
+    </button>
+  </div>
+
+  <ul style="list-style: none; padding: 0;">
+    <li x:for={todo of todos()} x:key={todo.id} style="background: #fce7f3; padding: 1rem; border-radius: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+      <span style="color: #831843; font-weight: 500;">{todo.text}</span>
+      <button on:click={() => removeTodo(todo.id)} style="background: #be185d; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer;">
+        Remove
+      </button>
+    </li>
+  </ul>
+
+  <p x:if={todos().length === 0} style="color: #9ca3af; font-style: italic; margin-top: 1rem;">
+    No tasks yet. Add one above! ✨
+  </p>
+</div>

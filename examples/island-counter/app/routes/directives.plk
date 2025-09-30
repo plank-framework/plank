@@ -1,0 +1,129 @@
+<slot name="title">Directives Demo - </slot>
+
+<section class="hero">
+  <div class="container">
+    <h1>Template Directives</h1>
+    <p>Demonstrating Plank's core template directives with interactive islands.</p>
+  </div>
+</section>
+
+<section style="padding: 4rem 0;">
+  <div class="container">
+    <div style="max-width: 1000px; margin: 0 auto;">
+
+      <!-- Event Handlers (on:*) -->
+      <div style="background: #f0f9ff; border: 2px solid #0ea5e9; padding: 2rem; border-radius: 0.5rem; margin-bottom: 3rem;">
+        <h2 style="color: #0c4a6e; margin-bottom: 1rem;">🎯 Event Handlers (on:*)</h2>
+        <p style="color: #075985; margin-bottom: 1.5rem;">
+          Attach event listeners to elements using the <code>on:</code> directive.
+        </p>
+
+        <island src="./islands/EventHandlerDemo.plk" client:load>
+          <div class="loading-placeholder">Loading demo...</div>
+        </island>
+
+        <pre class="code-block"><code>&lt;button on:click={handleClick}&gt;Click Me!&lt;/button&gt;</code></pre>
+      </div>
+
+      <!-- Two-way Binding (bind:*) -->
+      <div style="background: #f0fdf4; border: 2px solid #10b981; padding: 2rem; border-radius: 0.5rem; margin-bottom: 3rem;">
+        <h2 style="color: #065f46; margin-bottom: 1rem;">🔄 Two-way Binding (bind:*)</h2>
+        <p style="color: #047857; margin-bottom: 1.5rem;">
+          Create reactive two-way bindings between inputs and data using the <code>bind:</code> directive.
+        </p>
+
+        <island src="./islands/BindingDemo.plk" client:load>
+          <div class="loading-placeholder">Loading demo...</div>
+        </island>
+
+        <pre class="code-block"><code>&lt;input bind:value={username} type="text" /&gt;
+&lt;p&gt;Hello, {username}!&lt;/p&gt;</code></pre>
+      </div>
+
+      <!-- Conditional Rendering (x:if) -->
+      <div style="background: #fef3c7; border: 2px solid #f59e0b; padding: 2rem; border-radius: 0.5rem; margin-bottom: 3rem;">
+        <h2 style="color: #92400e; margin-bottom: 1rem;">🔀 Conditional Rendering (x:if)</h2>
+        <p style="color: #b45309; margin-bottom: 1.5rem;">
+          Conditionally render elements based on a boolean expression using the <code>x:if</code> directive.
+        </p>
+
+        <island src="./islands/ConditionalDemo.plk" client:load>
+          <div class="loading-placeholder">Loading demo...</div>
+        </island>
+
+        <pre class="code-block"><code>&lt;div x:if={isVisible}&gt;
+  &lt;p&gt;Conditionally rendered content&lt;/p&gt;
+&lt;/div&gt;</code></pre>
+      </div>
+
+      <!-- List Rendering (x:for) -->
+      <div style="background: #fce7f3; border: 2px solid #ec4899; padding: 2rem; border-radius: 0.5rem; margin-bottom: 3rem;">
+        <h2 style="color: #831843; margin-bottom: 1rem;">📋 List Rendering (x:for)</h2>
+        <p style="color: #be185d; margin-bottom: 1.5rem;">
+          Render lists efficiently using the <code>x:for</code> directive with <code>x:key</code> for optimal updates.
+        </p>
+
+        <island src="./islands/ListDemo.plk" client:load>
+          <div class="loading-placeholder">Loading demo...</div>
+        </island>
+
+        <pre class="code-block"><code>&lt;ul&gt;
+  &lt;li x:for={todo of todos} x:key={todo.id}&gt;
+    {todo.text}
+  &lt;/li&gt;
+&lt;/ul&gt;</code></pre>
+      </div>
+
+      <!-- Dynamic Classes (class:*) -->
+      <div style="background: #ede9fe; border: 2px solid #8b5cf6; padding: 2rem; border-radius: 0.5rem; margin-bottom: 3rem;">
+        <h2 style="color: #5b21b6; margin-bottom: 1rem;">🎨 Dynamic Classes (class:*)</h2>
+        <p style="color: #7c3aed; margin-bottom: 1.5rem;">
+          Toggle CSS classes dynamically based on conditions using the <code>class:</code> directive.
+        </p>
+
+        <island src="./islands/ClassDemo.plk" client:load>
+          <div class="loading-placeholder">Loading demo...</div>
+        </island>
+
+        <pre class="code-block"><code>&lt;button class:active={isActive}&gt;
+  Toggle Me
+&lt;/button&gt;</code></pre>
+      </div>
+
+      <!-- Note about islands -->
+      <div style="background: #f3f4f6; border: 2px solid #6b7280; padding: 2rem; border-radius: 0.5rem; margin-bottom: 3rem;">
+        <h2 style="color: #1f2937; margin-bottom: 1rem;">🏝️ Islands Architecture</h2>
+        <p style="color: #4b5563; margin-bottom: 1rem;">
+          Each interactive demo above is implemented as an <strong>island</strong> - a self-contained interactive component
+          that loads its own JavaScript only when needed. This demonstrates Plank's core architectural principle:
+        </p>
+        <ul style="color: #4b5563; margin-left: 1.5rem; margin-bottom: 1rem;">
+          <li style="margin-bottom: 0.5rem;"><strong>Static HTML foundation</strong> - The page structure loads instantly</li>
+          <li style="margin-bottom: 0.5rem;"><strong>Progressive enhancement</strong> - Interactive features load progressively</li>
+          <li style="margin-bottom: 0.5rem;"><strong>Minimal JavaScript</strong> - Only islands ship JavaScript, not the entire page</li>
+          <li style="margin-bottom: 0.5rem;"><strong>Code splitting</strong> - Each island loads independently</li>
+        </ul>
+        <pre class="code-block" style="margin-top: 1rem;"><code>&lt;!-- Each demo is an island --&gt;
+&lt;island src="./islands/EventHandlerDemo.plk" client:load&gt;
+  &lt;div&gt;Loading demo...&lt;/div&gt;
+&lt;/island&gt;</code></pre>
+      </div>
+
+      <!-- Back to home -->
+      <div style="margin-top: 3rem; text-align: center; padding: 2rem; background: #f9fafb; border-radius: 0.5rem;">
+        <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Explore More Examples</h3>
+        <p style="color: #6b7280; margin-bottom: 1.5rem;">
+          Check out our other examples to learn more about Plank's islands architecture.
+        </p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+          <a href="/" style="background: #2563eb; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">
+            ← Islands Demo
+          </a>
+          <a href="/about" style="background: #8b5cf6; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">
+            About Islands →
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

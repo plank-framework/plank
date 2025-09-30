@@ -227,14 +227,20 @@ export class PlankDevServer extends EventEmitter implements DevServer {
       streaming: false,
     });
 
-    const result = await renderer.render(match.route.pagePath, {
-      url: req.url || '/',
-      method: req.method || 'GET',
-      headers: req.headers as Record<string, string>,
-      params: match.params,
-      query: Object.fromEntries(new URL(req.url || '/', `http://${req.headers.host}`).searchParams),
-      data: {},
-    });
+    const result = await renderer.render(
+      match.route.pagePath,
+      {
+        url: req.url || '/',
+        method: req.method || 'GET',
+        headers: req.headers as Record<string, string>,
+        params: match.params,
+        query: Object.fromEntries(
+          new URL(req.url || '/', `http://${req.headers.host}`).searchParams
+        ),
+        data: {},
+      },
+      match.route.layoutPath
+    );
 
     const html = result.html;
 

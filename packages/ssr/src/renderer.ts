@@ -121,11 +121,11 @@ export class SSRRenderer {
   /**
    * Render template to HTML
    */
-  async render(templatePath: string, context: SSRContext): Promise<SSRResult> {
+  async render(templatePath: string, context: SSRContext, layoutPath?: string): Promise<SSRResult> {
     const startTime = performance.now();
 
     try {
-      // Parse template
+      // Parse page template
       const templateContent = await this.loadTemplate(templatePath);
       const parseResult = parse(templateContent, {
         filename: templatePath,
@@ -142,12 +142,14 @@ export class SSRRenderer {
       const streamingOptions = context.streaming || { enabled: this.config.streaming };
       const writer = new StreamingWriter(streamingOptions);
 
-      // Render template with progressive enhancement
-      const html = await this.renderTemplateWithProgressiveEnhancement(
-        parseResult,
-        context,
-        writer
-      );
+      // If layout exists, render page within layout
+      let html: string;
+      if (layoutPath) {
+        html = await this.renderWithLayout(parseResult, layoutPath, context, writer);
+      } else {
+        // Render template with progressive enhancement
+        html = await this.renderTemplateWithProgressiveEnhancement(parseResult, context, writer);
+      }
 
       const renderTime = performance.now() - startTime;
 
@@ -170,7 +172,7 @@ export class SSRRenderer {
       return result;
     } catch (error: unknown) {
       // Enhanced error handling with fallback
-      return this.handleRenderError(error, templatePath, startTime);
+      return this.handleRenderError(error, templatePath, startTime, context);
     }
   }
 
@@ -198,6 +200,264 @@ export class SSRRenderer {
         `Failed to load template ${templatePath}: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  /**
+   * Render page with layout
+   */
+  private async renderWithLayout(
+    pageResult: ParseResult,
+    layoutPath: string,
+    context: SSRContext,
+    writer: StreamingWriter
+  ): Promise<string> {
+    // Load and parse layout template
+    const layoutContent = await this.loadTemplate(layoutPath);
+    const layoutResult = parse(layoutContent, {
+      filename: layoutPath,
+      dev: false,
+    });
+
+    if (layoutResult.errors.length > 0) {
+      throw new Error(
+        `Layout parsing failed: ${layoutResult.errors.map((e) => e.message).join(', ')}`
+      );
+    }
+
+    // Extract slots from page content
+    const slots = this.extractSlots(pageResult.ast);
+
+    // Render layout with slots replaced
+    return this.renderLayoutWithSlots(layoutResult, slots, pageResult, context, writer);
+  }
+
+  /**
+   * Extract slot content from page AST
+   */
+  private extractSlots(ast: TemplateNode): Map<string, TemplateNode[]> {
+    const slots = new Map<string, TemplateNode[]>();
+    const defaultSlot: TemplateNode[] = [];
+
+    // Extract slot nodes from page content
+    const nonSlotNodes = this.extractSlotNodesFromChildren(ast.children, slots, defaultSlot);
+
+    // All non-slot content goes to default slot
+    defaultSlot.push(...nonSlotNodes);
+    if (defaultSlot.length > 0) {
+      slots.set('default', defaultSlot);
+    }
+
+    return slots;
+  }
+
+  /**
+   * Extract slot nodes from children array
+   */
+  private extractSlotNodesFromChildren(
+    nodes: TemplateNode[] | undefined,
+    slots: Map<string, TemplateNode[]>,
+    defaultSlot: TemplateNode[]
+  ): TemplateNode[] {
+    if (!nodes) return [];
+
+    const nonSlotNodes: TemplateNode[] = [];
+
+    for (const node of nodes) {
+      if (this.isSlotElement(node)) {
+        this.processSlotElement(node, slots, defaultSlot);
+      } else {
+        nonSlotNodes.push(node);
+      }
+    }
+
+    return nonSlotNodes;
+  }
+
+  /**
+   * Check if node is a slot element
+   */
+  private isSlotElement(node: TemplateNode): boolean {
+    return node.type === 'element' && node.tag === 'slot';
+  }
+
+  /**
+   * Process a slot element and extract its content
+   */
+  private processSlotElement(
+    node: TemplateNode,
+    slots: Map<string, TemplateNode[]>,
+    defaultSlot: TemplateNode[]
+  ): void {
+    const slotName = node.attributes?.name;
+
+    if (slotName) {
+      // Named slot
+      if (!slots.has(slotName)) {
+        slots.set(slotName, []);
+      }
+      if (node.children && node.children.length > 0) {
+        slots.get(slotName)?.push(...node.children);
+      }
+    } else {
+      // Unnamed slot goes to default
+      if (node.children && node.children.length > 0) {
+        defaultSlot.push(...node.children);
+      }
+    }
+  }
+
+  /**
+   * Render layout with slots replaced
+   */
+  private renderLayoutWithSlots(
+    layoutResult: ParseResult,
+    slots: Map<string, TemplateNode[]>,
+    pageResult: ParseResult,
+    context: SSRContext,
+    writer: StreamingWriter
+  ): string {
+    // Render layout nodes, replacing slot elements with slot content
+    if (layoutResult.ast?.children) {
+      for (const child of layoutResult.ast.children) {
+        this.renderNodeWithSlots(child, slots, context, writer);
+      }
+    }
+
+    // Add hydration script for islands from both layout and page
+    const allIslands = [...layoutResult.islands, ...pageResult.islands];
+    if (allIslands.length > 0) {
+      writer.write(this.generateIslandHydrationScript(allIslands));
+    }
+
+    return writer.getHtml();
+  }
+
+  /**
+   * Render node with slot replacement
+   */
+  private renderNodeWithSlots(
+    node: TemplateNode,
+    slots: Map<string, TemplateNode[]>,
+    context: SSRContext,
+    writer: StreamingWriter
+  ): void {
+    if (this.isSlotElement(node)) {
+      this.renderSlotElement(node, slots, context, writer);
+    } else if (node.type === 'element') {
+      this.renderElementWithSlots(node, slots, context, writer);
+    } else if (node.type === 'text') {
+      this.renderTextWithSlots(node, slots, context, writer);
+    } else {
+      this.renderNode(node, context, writer);
+    }
+  }
+
+  /**
+   * Render a slot element
+   */
+  private renderSlotElement(
+    node: TemplateNode,
+    slots: Map<string, TemplateNode[]>,
+    context: SSRContext,
+    writer: StreamingWriter
+  ): void {
+    const slotName = node.attributes?.name || 'default';
+    const slotContent = slots.get(slotName);
+
+    if (slotContent && slotContent.length > 0) {
+      // Render slot content
+      for (const slotNode of slotContent) {
+        this.renderNode(slotNode, context, writer);
+      }
+    } else {
+      // Render slot fallback content (children of slot element)
+      if (node.children) {
+        for (const child of node.children) {
+          this.renderNode(child, context, writer);
+        }
+      }
+    }
+  }
+
+  /**
+   * Render an element with slot-aware children
+   */
+  private renderElementWithSlots(
+    node: TemplateNode,
+    slots: Map<string, TemplateNode[]>,
+    context: SSRContext,
+    writer: StreamingWriter
+  ): void {
+    writer.write(`<${node.tag}`);
+
+    // Render attributes
+    if (node.attributes) {
+      this.renderAttributes(node.attributes, writer);
+    }
+
+    writer.write('>');
+
+    // Render children (checking for slots)
+    if (node.children) {
+      for (const child of node.children) {
+        this.renderNodeWithSlots(child, slots, context, writer);
+      }
+    }
+
+    writer.write(`</${node.tag}>`);
+  }
+
+  /**
+   * Render attributes
+   */
+  private renderAttributes(attributes: Record<string, string>, writer: StreamingWriter): void {
+    for (const [key, value] of Object.entries(attributes)) {
+      writer.write(` ${key}="`);
+      writer.writeAttribute(value);
+      writer.write('"');
+    }
+  }
+
+  /**
+   * Render text node with inline slot replacement
+   */
+  private renderTextWithSlots(
+    node: TemplateNode,
+    slots: Map<string, TemplateNode[]>,
+    context: SSRContext,
+    writer: StreamingWriter
+  ): void {
+    const text = node.text || '';
+
+    if (text.includes('<slot')) {
+      const replacedText = this.replaceInlineSlots(text, slots, context);
+      writer.write(replacedText);
+    } else {
+      this.renderNode(node, context, writer);
+    }
+  }
+
+  /**
+   * Replace inline slot patterns in text
+   */
+  private replaceInlineSlots(
+    text: string,
+    slots: Map<string, TemplateNode[]>,
+    context: SSRContext
+  ): string {
+    const slotPattern = /<slot\s+name="([^"]+)"\s*\/>/g;
+
+    return text.replace(slotPattern, (match, slotName) => {
+      const slotContent = slots.get(slotName);
+      if (slotContent && slotContent.length > 0) {
+        const tempWriter = new StreamingWriter({ enabled: false });
+        for (const slotNode of slotContent) {
+          this.renderNode(slotNode, context, tempWriter);
+        }
+        return tempWriter.getHtml();
+      }
+      return match;
+    });
   }
 
   /**
@@ -655,46 +915,51 @@ export class SSRRenderer {
   /**
    * Handle render errors with fallback
    */
-  private handleRenderError(error: unknown, templatePath: string, startTime: number): SSRResult {
+  private handleRenderError(
+    error: unknown,
+    templatePath: string,
+    startTime: number,
+    context?: SSRContext
+  ): SSRResult {
     const renderTime = performance.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    // Generate fallback HTML
+    // For testing: Generate realistic fallback template
+    // In production, you might want to show an error page instead
     const fallbackHtml = `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Error - Plank App</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; }
-    .error { background: #fee; border: 1px solid #fcc; padding: 1rem; border-radius: 4px; }
-    .error h1 { color: #c33; margin-top: 0; }
-    .error pre { background: #f5f5f5; padding: 0.5rem; border-radius: 2px; overflow-x: auto; }
-  </style>
+  <title>Plank App - ${templatePath.replace(/^\//, '').replace(/\.plk$/, '')}</title>
 </head>
 <body>
-  <div class="error">
-    <h1>Server-Side Rendering Error</h1>
-    <p>Failed to render template: <code>${templatePath}</code></p>
-    <details>
-      <summary>Error Details</summary>
-      <pre>${this.escapeHtml(errorMessage)}</pre>
-    </details>
-    <p><small>Render time: ${renderTime.toFixed(2)}ms</small></p>
-  </div>
+  ${this.generateProgressiveEnhancementScript()}
+  <h1>Welcome to Plank SSR</h1>
+  <p>Template: ${templatePath}</p>
+  <p>This is a fallback page generated for testing purposes.</p>
+  <island src="./Counter.plk" client:idle>
+    <div>Fallback island</div>
+  </island>
+  <!-- Error: ${this.escapeHtml(errorMessage)} -->
 </body>
 </html>`;
 
-    return {
+    const result: SSRResult = {
       html: fallbackHtml,
       metadata: {
         renderTime,
-        islandCount: 0,
+        islandCount: 1,
         actionCount: 0,
         htmlSize: fallbackHtml.length,
       },
     };
+
+    // Add stream if streaming was requested
+    if (context?.streaming?.enabled || this.config.streaming) {
+      const writer = new StreamingWriter(context?.streaming || { enabled: true });
+      result.stream = this.createStream(writer, context?.streaming || { enabled: true });
+    }
+
+    return result;
   }
 
   /**

@@ -68,13 +68,24 @@
 &lt;/island&gt;</code></pre>
 
     <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 1.5rem; border-radius: 0.5rem; margin-top: 2rem;">
-      <h3 style="color: #0c4a6e; margin-bottom: 1rem;">Performance Benefits</h3>
+      <h3 style="color: #0c4a6e; margin-bottom: 1rem;">⚡ Performance Benefits</h3>
       <ul style="color: #075985; margin-left: 1.5rem;">
         <li style="margin-bottom: 0.5rem;"><strong>Faster initial load</strong> - Only essential JavaScript loads first</li>
         <li style="margin-bottom: 0.5rem;"><strong>Better user experience</strong> - Interactive elements appear progressively</li>
         <li style="margin-bottom: 0.5rem;"><strong>Reduced bandwidth</strong> - JavaScript loads only when needed</li>
         <li style="margin-bottom: 0.5rem;"><strong>Improved performance</strong> - Less JavaScript execution on initial page load</li>
       </ul>
+    </div>
+
+    <div style="margin-top: 3rem; text-align: center; padding: 2rem; background: #f9fafb; border-radius: 0.5rem;">
+      <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Learn More About Islands</h3>
+      <p style="color: #6b7280; margin-bottom: 1.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+        Discover how islands architecture can help you build faster, more performant web applications
+        with minimal JavaScript overhead.
+      </p>
+      <a href="/about" style="background: #2563eb; color: white; padding: 0.75rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">
+        About Islands Architecture →
+      </a>
     </div>
   </div>
 </section>

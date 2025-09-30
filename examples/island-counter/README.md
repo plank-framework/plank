@@ -45,6 +45,26 @@ This example demonstrates Plank's **islands architecture** with interactive comp
 </island>
 ```
 
+## Project Structure
+
+```
+app/
+├── layouts/
+│   └── layout.plk          # Root layout (header, footer, styles)
+├── routes/
+│   ├── index.plk           # Home page with interactive demos
+│   └── about.plk           # About islands architecture
+└── islands/
+    ├── Counter.plk         # Counter island (client:load)
+    ├── Timer.plk           # Timer island (client:idle)
+    └── Chart.plk           # Chart island (client:visible)
+```
+
+## Pages
+
+- **Home (/)** - Interactive demos showing all three island loading strategies in action
+- **About (/about)** - Comprehensive guide to islands architecture, benefits, and use cases
+
 ## Architecture
 
 This example demonstrates:

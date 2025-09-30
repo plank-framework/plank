@@ -110,12 +110,12 @@
       </div>
 
       <div style="background: #f9fafb; padding: 2rem; border-radius: 0.5rem; margin-top: 3rem;">
-        <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">Get Started</h3>
+        <h3 style="font-size: 1.5rem; margin-bottom: 1rem;">See It In Action</h3>
         <p style="color: #4b5563; margin-bottom: 1rem;">
-          Ready to build with islands? Check out our demos and start creating interactive components
-          that enhance your static content.
+          Ready to see islands in action? Check out our interactive demos showing different loading strategies
+          and real-world use cases.
         </p>
-        <a href="/demos" style="background: #2563eb; color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">View Demos</a>
+        <a href="/" style="background: #2563eb; color: white; padding: 1rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; display: inline-block;">Try Interactive Demos →</a>
       </div>
     </div>
   </div>

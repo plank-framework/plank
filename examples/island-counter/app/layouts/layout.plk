@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><slot name="title" />Island Counter - Plank Islands Demo</title>
+  <title><slot name="title" /> Island Counter - Plank Islands Demo</title>
   <meta name="description" content="Demonstration of Plank's islands architecture with interactive components.">
 
   <!-- Styles -->
@@ -183,8 +183,7 @@
         <a href="/" class="logo">Island Counter</a>
         <ul class="nav-links">
           <li><a href="/">Home</a></li>
-          <li><a href="/demos">Demos</a></li>
-          <li><a href="/about">About</a></li>
+          <li><a href="/about">About Islands</a></li>
         </ul>
       </nav>
     </div>

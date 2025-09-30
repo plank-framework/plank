@@ -395,7 +395,9 @@ describe('Plank Signals', () => {
       expect(data.timestamp).toBeDefined();
       expect(data.values).toHaveLength(3); // count, doubled, tripled
 
-      const signalData = data.values.find((v: { type: string; value: unknown }) => v.type === 'signal');
+      const signalData = data.values.find(
+        (v: { type: string; value: unknown }) => v.type === 'signal'
+      );
       const computedData = data.values.filter((v: { type: string }) => v.type === 'computed');
 
       expect(signalData.value).toBe(42);

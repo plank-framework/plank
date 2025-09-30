@@ -474,9 +474,12 @@ function generateImportStatements(
  */
 function generateMountFunction(content: string, scripts: unknown[]): string {
   // Check if the island already has a mount function defined
-  const hasManualMount = scripts.some(script => {
+  const hasManualMount = scripts.some((script) => {
     const scriptContent = extractScriptContent(script);
-    return scriptContent?.includes('export function mount') || scriptContent?.includes('export const mount');
+    return (
+      scriptContent?.includes('export function mount') ||
+      scriptContent?.includes('export const mount')
+    );
   });
 
   // If a manual mount function exists, don't generate one
@@ -485,8 +488,7 @@ function generateMountFunction(content: string, scripts: unknown[]): string {
   }
 
   // IMPORTANT: Extract directives BEFORE stripping them from HTML!
-  const htmlWithDirectives = content
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  const htmlWithDirectives = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
 
   const forLoops = extractForLoops(htmlWithDirectives);
 
@@ -809,8 +811,12 @@ function parseDirectiveMatches(attrs: string) {
 
   return {
     on: onMatch ? [onMatch[0], onMatch[1], extractDirectiveValue(attrs, `on:${onMatch[1]}`)] : null,
-    bind: bindMatch ? [bindMatch[0], bindMatch[1], extractDirectiveValue(attrs, `bind:${bindMatch[1]}`)] : null,
-    class: classMatch ? [classMatch[0], classMatch[1], extractDirectiveValue(attrs, `class:${classMatch[1]}`)] : null,
+    bind: bindMatch
+      ? [bindMatch[0], bindMatch[1], extractDirectiveValue(attrs, `bind:${bindMatch[1]}`)]
+      : null,
+    class: classMatch
+      ? [classMatch[0], classMatch[1], extractDirectiveValue(attrs, `class:${classMatch[1]}`)]
+      : null,
     xIf: attrs.includes('x:if=') ? [null, extractDirectiveValue(attrs, 'x:if')] : null,
     xFor: attrs.includes('x:for=') ? [null, extractDirectiveValue(attrs, 'x:for')] : null,
   };
@@ -1280,3 +1286,13 @@ export default {
 };
 `;
 }
+
+// Export internal functions for testing
+export const __testing__ = {
+  generateMountFunction,
+  extractDirectivesFromHTML,
+  extractForLoops,
+  extractTextInterpolations,
+  stripDirectives,
+  extractHTMLFromPlk,
+};

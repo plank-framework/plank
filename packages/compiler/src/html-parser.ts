@@ -101,10 +101,7 @@ export class HybridHTMLParser {
     // - Opening curly brace
     // - Value (anything except closing brace)
     // - Closing curly brace
-    return source.replace(
-      /([a-zA-Z][a-zA-Z0-9]*:[a-zA-Z][a-zA-Z0-9-]*)=\{([^}]+)\}/g,
-      '$1="{$2}"'
-    );
+    return source.replace(/([a-zA-Z][a-zA-Z0-9]*:[a-zA-Z][a-zA-Z0-9-]*)=\{([^}]+)\}/g, '$1="{$2}"');
   }
 
   /**

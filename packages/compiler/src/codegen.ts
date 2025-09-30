@@ -54,7 +54,12 @@ export type DOMOperation =
   | { type: 'setAttribute'; name: string; value: string }
   | { type: 'setTextContent'; content: string }
   | { type: 'appendChild'; child: DOMOperation }
-  | { type: 'createIsland'; src: string; strategy: string; props?: Record<string, unknown> | undefined }
+  | {
+      type: 'createIsland';
+      src: string;
+      strategy: string;
+      props?: Record<string, unknown> | undefined;
+    }
   | { type: 'createDirective'; directive: DirectiveNode }
   | { type: 'createScript'; script: ScriptNode };
 
@@ -258,7 +263,9 @@ class CodeGenerator {
   private generateTextCode(node: TemplateNode): void {
     if (node.text) {
       const textVar = `textNode_${Math.random().toString(36).substr(2, 9)}`;
-      this.addLine(`const ${textVar} = document.createTextNode("${this.escapeString(node.text)}");`);
+      this.addLine(
+        `const ${textVar} = document.createTextNode("${this.escapeString(node.text)}");`
+      );
       this.addLine(`container.appendChild(${textVar});`);
     }
   }
@@ -513,7 +520,7 @@ class CodeGenerator {
     this.code.push('');
     this.code.push('// Helper functions');
     this.code.push('function escapeString(str) {');
-    this.code.push('  return str.replace(/"/g, \'\\"\').replace(/\\/g, \'\\\\\');');
+    this.code.push("  return str.replace(/\"/g, '\\\"').replace(/\\/g, '\\\\');");
     this.code.push('}');
   }
 
@@ -561,10 +568,14 @@ class CodeGenerator {
 
     // Import runtime dependencies
     lines.push(`import { signal, computed, effect } from '@plank/runtime-core';`);
-    lines.push(`import { bindText, bindAttribute, bindProperty, mountIsland } from '@plank/runtime-dom';`);
+    lines.push(
+      `import { bindText, bindAttribute, bindProperty, mountIsland } from '@plank/runtime-dom';`
+    );
 
     // Generate island component code
-    lines.push(`export function mount${island.src.replace(/[^a-zA-Z0-9]/g, '')}(element, props = {}) {`);
+    lines.push(
+      `export function mount${island.src.replace(/[^a-zA-Z0-9]/g, '')}(element, props = {}) {`
+    );
     lines.push(`  // Island component logic for ${island.src}`);
     lines.push(`  // This would be generated from the actual island template`);
     lines.push(`  console.log('Mounting island ${island.src} with strategy ${island.strategy}');`);

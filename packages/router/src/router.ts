@@ -64,7 +64,7 @@ export class FileBasedRouter {
     const pageFiles = routeFiles.filter((file) => file.type === 'page');
     const allLayoutFiles = [
       ...layoutFiles.filter((file) => file.type === 'layout'),
-      ...routeFiles.filter((file) => file.type === 'layout')
+      ...routeFiles.filter((file) => file.type === 'layout'),
     ];
 
     // Build configurations
@@ -263,9 +263,13 @@ export class FileBasedRouter {
   /**
    * Extract parameters from catch-all routes
    */
-  private extractCatchAllParams(routeSegments: string[], pathSegments: string[], originalPath: string): Record<string, string> {
+  private extractCatchAllParams(
+    routeSegments: string[],
+    pathSegments: string[],
+    originalPath: string
+  ): Record<string, string> {
     const params: Record<string, string> = {};
-    const catchAllIndex = routeSegments.findIndex(seg => seg.startsWith('[...'));
+    const catchAllIndex = routeSegments.findIndex((seg) => seg.startsWith('[...'));
 
     if (catchAllIndex === -1) {
       return params;
@@ -275,7 +279,12 @@ export class FileBasedRouter {
     for (let i = 0; i < catchAllIndex; i++) {
       const routeSegment = routeSegments[i];
       const pathSegment = pathSegments[i];
-      if (routeSegment && pathSegment && routeSegment.startsWith('[') && routeSegment.endsWith(']')) {
+      if (
+        routeSegment &&
+        pathSegment &&
+        routeSegment.startsWith('[') &&
+        routeSegment.endsWith(']')
+      ) {
         const extracted = this.extractParameterFromSegment(
           routeSegment,
           pathSegment,
@@ -314,7 +323,10 @@ export class FileBasedRouter {
   /**
    * Extract parameters from optional routes
    */
-  private extractOptionalParams(routeSegments: string[], pathSegments: string[]): Record<string, string> {
+  private extractOptionalParams(
+    routeSegments: string[],
+    pathSegments: string[]
+  ): Record<string, string> {
     const params: Record<string, string> = {};
 
     // Find the optional segment in the route
@@ -364,7 +376,10 @@ export class FileBasedRouter {
   /**
    * Extract parameters from regular dynamic routes
    */
-  private extractRegularParams(routeSegments: string[], pathSegments: string[]): Record<string, string> {
+  private extractRegularParams(
+    routeSegments: string[],
+    pathSegments: string[]
+  ): Record<string, string> {
     const params: Record<string, string> = {};
 
     for (let i = 0; i < routeSegments.length; i++) {
@@ -462,7 +477,7 @@ export class FileBasedRouter {
     }
 
     const hierarchy: LayoutConfig[] = [];
-    const layoutMap = new Map(this.layouts.map(l => [l.filePath, l]));
+    const layoutMap = new Map(this.layouts.map((l) => [l.filePath, l]));
 
     let currentLayout = layoutMap.get(route.layoutPath);
     while (currentLayout) {
@@ -481,7 +496,7 @@ export class FileBasedRouter {
    * Get all routes that use a specific layout
    */
   getRoutesByLayout(layoutPath: string): RouteConfig[] {
-    return this.routes.filter(route => route.layoutPath === layoutPath);
+    return this.routes.filter((route) => route.layoutPath === layoutPath);
   }
 
   /**
@@ -496,10 +511,10 @@ export class FileBasedRouter {
   } {
     return {
       total: this.routes.length,
-      static: this.routes.filter(r => !r.isDynamic).length,
-      dynamic: this.routes.filter(r => r.isDynamic && !r.isCatchAll).length,
-      catchAll: this.routes.filter(r => r.isCatchAll).length,
-      withLayouts: this.routes.filter(r => r.layoutPath).length,
+      static: this.routes.filter((r) => !r.isDynamic).length,
+      dynamic: this.routes.filter((r) => r.isDynamic && !r.isCatchAll).length,
+      catchAll: this.routes.filter((r) => r.isCatchAll).length,
+      withLayouts: this.routes.filter((r) => r.layoutPath).length,
     };
   }
 

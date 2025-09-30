@@ -550,7 +550,10 @@ function extractDependencies(reactive: ReactiveValue): string[] {
 /**
  * Serialize a single reactive value
  */
-function serializeReactiveValue(id: string, reactive: ReactiveValue): {
+function serializeReactiveValue(
+  id: string,
+  reactive: ReactiveValue
+): {
   id: string;
   type: 'signal' | 'computed';
   value: unknown;

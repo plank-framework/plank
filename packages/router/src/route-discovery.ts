@@ -155,7 +155,7 @@ function parseRoutePath(dirPath: string, fileName: string, fileType: RouteFileTy
   const segments = dirPath.split('/').filter(Boolean);
 
   // Add directory segments (skip '.' which represents current directory)
-  const pathSegments = segments.filter(seg => seg !== '.');
+  const pathSegments = segments.filter((seg) => seg !== '.');
 
   // Add file segment for non-page files or non-index pages
   // For layout files, don't add the filename to the route path
@@ -303,7 +303,11 @@ export function matchesRoutePattern(routePath: string, pattern: string): boolean
 /**
  * Check if catch-all pattern matches
  */
-function matchesCatchAllPattern(routeSegments: string[], patternSegments: string[], catchAllIndex: number): boolean {
+function matchesCatchAllPattern(
+  routeSegments: string[],
+  patternSegments: string[],
+  catchAllIndex: number
+): boolean {
   // For catch-all, check if all segments before it match
   for (let i = 0; i < catchAllIndex; i++) {
     const patternSegment = patternSegments[i];

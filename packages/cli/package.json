@@ -22,6 +22,12 @@
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
+    "lint": "biome lint .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format .",
+    "format:fix": "biome check --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"

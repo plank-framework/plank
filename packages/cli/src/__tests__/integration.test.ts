@@ -84,7 +84,9 @@ describe('CLI Integration Tests', () => {
     const projectPath = resolve(testDir, projectName);
     expect(await readFile(join(projectPath, 'package.json'), 'utf-8')).toContain(projectName);
     expect(await readFile(join(projectPath, 'plank.config.ts'), 'utf-8')).toContain('defineConfig');
-    expect(await readFile(join(projectPath, 'app/routes/index.plk'), 'utf-8')).toContain('Welcome to Plank');
+    expect(await readFile(join(projectPath, 'app/routes/index.plk'), 'utf-8')).toContain(
+      'Welcome to Plank'
+    );
     expect(await readFile(join(projectPath, 'app/routes/about.plk'), 'utf-8')).toContain('About');
 
     // Change to project directory
@@ -263,11 +265,13 @@ export default defineConfig({
     await writeFile(join(testDir, 'app/routes/index.plk'), '<div>HTTPS Test</div>');
 
     // Test HTTPS configuration
-    await expect(devCommand({
-      port: '3007',
-      open: false,
-      https: true
-    })).resolves.not.toThrow();
+    await expect(
+      devCommand({
+        port: '3007',
+        open: false,
+        https: true,
+      })
+    ).resolves.not.toThrow();
   });
 
   test('should handle custom routes directory', async () => {
@@ -276,10 +280,12 @@ export default defineConfig({
     await writeFile(join(testDir, customRoutesDir, 'index.plk'), '<div>Custom Routes</div>');
 
     // Test with custom routes directory
-    await expect(devCommand({
-      port: '3008',
-      open: false,
-      routesDir: customRoutesDir
-    })).resolves.not.toThrow();
+    await expect(
+      devCommand({
+        port: '3008',
+        open: false,
+        routesDir: customRoutesDir,
+      })
+    ).resolves.not.toThrow();
   });
 });

@@ -2,9 +2,9 @@
  * @fileoverview Integration tests for development server
  */
 
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createDevServer } from '../dev-server.js';
 import type { DevServerConfig } from '../types.js';
 
@@ -119,7 +119,7 @@ describe('Dev Server Integration Tests', () => {
     await writeFile(testFile, '<div>Updated Content</div>');
 
     // Wait for potential async operations
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     await server.stop();
   });

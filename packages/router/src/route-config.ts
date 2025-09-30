@@ -80,7 +80,7 @@ function findAppropriateLayout(routePath: string, layouts: LayoutConfig[]): stri
   }
 
   // Fallback to root layout if no specific match found
-  const rootLayout = layouts.find(layout => layout.isRoot);
+  const rootLayout = layouts.find((layout) => layout.isRoot);
   return rootLayout?.filePath;
 }
 
@@ -366,7 +366,7 @@ function matchesRoutePath(route: RouteConfig, path: string): boolean {
  * Check if catch-all route matches
  */
 function matchesCatchAllRoute(routeSegments: string[], pathSegments: string[]): boolean {
-  const catchAllIndex = routeSegments.findIndex(seg => seg.startsWith('[...'));
+  const catchAllIndex = routeSegments.findIndex((seg) => seg.startsWith('[...'));
   if (catchAllIndex === -1) {
     return false;
   }

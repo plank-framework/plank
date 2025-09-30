@@ -44,7 +44,17 @@ export interface ScriptNode {
 }
 
 export interface ExpressionNode {
-  type: 'variable' | 'function' | 'operator' | 'literal' | 'conditional' | 'member' | 'property' | 'string' | 'boolean' | 'number';
+  type:
+    | 'variable'
+    | 'function'
+    | 'operator'
+    | 'literal'
+    | 'conditional'
+    | 'member'
+    | 'property'
+    | 'string'
+    | 'boolean'
+    | 'number';
   value?: string | number | boolean;
   object?: string;
   property?: string;

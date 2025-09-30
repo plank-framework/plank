@@ -18,7 +18,7 @@ describe('Code Generation', () => {
 
     const result = compile(template, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.code).toContain('export function render(context = {})');
     expect(result.code).toContain('document.createElement');
     // CodegenResult doesn't have errors property
@@ -34,7 +34,7 @@ describe('Code Generation', () => {
 
     const result = compile(template, { target: 'server' });
 
-    expect(result.code).toContain('import { SSRRenderer, StreamingWriter } from \'@plank/ssr\'');
+    expect(result.code).toContain("import { SSRRenderer, StreamingWriter } from '@plank/ssr'");
     expect(result.code).toContain('export function render(context = {})');
     expect(result.code).toContain('SSRRenderer');
     // CodegenResult doesn't have errors property
@@ -97,14 +97,14 @@ describe('Code Generation', () => {
     expect(result.chunks).toHaveLength(2);
 
     // Check Counter island chunk
-    const counterChunk = result.chunks.find(c => c.src === './Counter.plk');
+    const counterChunk = result.chunks.find((c) => c.src === './Counter.plk');
     expect(counterChunk).toBeDefined();
     expect(counterChunk?.strategy).toBe('load');
     expect(counterChunk?.code).toContain('mountCounterplk');
     expect(counterChunk?.dependencies).toContain('@plank/runtime-dom');
 
     // Check Chart island chunk
-    const chartChunk = result.chunks.find(c => c.src === './Chart.plk');
+    const chartChunk = result.chunks.find((c) => c.src === './Chart.plk');
     expect(chartChunk).toBeDefined();
     expect(chartChunk?.strategy).toBe('idle');
     expect(chartChunk?.code).toContain('mountChartplk');
@@ -146,7 +146,8 @@ describe('Code Generation', () => {
     expect(result.scripts).toHaveLength(1);
     expect(result.scripts[0]).toEqual({
       type: 'server',
-      content: 'export async function getData() {\n            return { message: \'Hello from server\' };\n          }',
+      content:
+        "export async function getData() {\n            return { message: 'Hello from server' };\n          }",
       exports: ['getData'],
     });
     // CodegenResult doesn't have errors property
@@ -213,7 +214,7 @@ describe('Code Generation', () => {
 
     const result = compile(template, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.code).toContain('addEventListener');
     expect(result.code).toContain('bindProperty');
     expect(result.code).toContain('if (isVisible)');
@@ -235,7 +236,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'server' });
 
-    expect(result.code).toContain('import { SSRRenderer, StreamingWriter } from \'@plank/ssr\'');
+    expect(result.code).toContain("import { SSRRenderer, StreamingWriter } from '@plank/ssr'");
     expect(result.code).toContain('export function render(context = {})');
     expect(result.code).toContain('const writer = new StreamingWriter({ enabled: true })');
     expect(result.code).toContain('return renderer.render(ast, context)');
@@ -262,7 +263,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.code).toContain('if (isVisible)');
     expect(result.code).toContain('addEventListener("click", handleClick)');
     expect(result.code).toContain('bindClass(');
@@ -290,7 +291,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.islands).toHaveLength(2);
     expect(result.islands).toContain('./Parent.plk');
     expect(result.islands).toContain('./Child.plk');
@@ -320,7 +321,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.actions).toHaveLength(3);
     expect(result.actions).toContain('createUser');
     expect(result.actions).toContain('updateUser');
@@ -335,7 +336,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.code).toContain('export function render(context = {})');
     expect(result.code).toContain('return container');
     expect(result.dependencies).toHaveLength(1);
@@ -349,7 +350,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.code).toContain('createTextNode("Just plain text content")');
     expect(result.dependencies).toHaveLength(1);
     expect(result.islands).toHaveLength(0);
@@ -362,7 +363,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.code).toContain('export function render(context = {})');
     expect(result.code).toContain('return container');
     expect(result.dependencies).toHaveLength(1);
@@ -382,7 +383,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     // The result may not have errors property, so we just check that it exists
     expect(result).toBeDefined();
     expect(result.dependencies).toHaveLength(1);
@@ -402,10 +403,10 @@ describe('Code Generation', () => {
       target: 'client',
       dev: true,
       filename: 'test.plk',
-      sourceMap: true
+      sourceMap: true,
     });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.code).toContain('export function render(context = {})');
     expect(result.dependencies).toHaveLength(1);
     expect(result.islands).toHaveLength(0);
@@ -426,7 +427,7 @@ describe('Code Generation', () => {
     const parseResult = parse(source);
     const result = generateCode(parseResult, { target: 'client' });
 
-    expect(result.code).toContain('import { signal, computed, effect } from \'@plank/runtime-dom\'');
+    expect(result.code).toContain("import { signal, computed, effect } from '@plank/runtime-dom'");
     expect(result.code).toContain('for (const item of items)');
     expect(result.code).toContain('document.createElement("li")');
     expect(result.code).toContain('data-key');

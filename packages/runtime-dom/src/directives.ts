@@ -128,11 +128,14 @@ function handleBindDirective<T = unknown>(context: DirectiveContext<T>): Effect 
 }
 
 // Registry for tracking removed elements and their restoration info
-const removedElements = new WeakMap<Element, {
-  parent: Element;
-  nextSibling: Node | null;
-  effects: Set<Effect>;
-}>();
+const removedElements = new WeakMap<
+  Element,
+  {
+    parent: Element;
+    nextSibling: Node | null;
+    effects: Set<Effect>;
+  }
+>();
 
 /**
  * Restore element to DOM from removal registry

@@ -88,7 +88,7 @@ export async function loadIsland<T = Record<string, unknown>>(
           console.log(`Fallback island ${src} effect running`);
         });
       },
-      unmount: () => {}
+      unmount: () => {},
     };
 
     islandRegistry[src] = fallbackComponent as IslandComponent<Record<string, unknown>>;

@@ -16,12 +16,12 @@
     "test:run": "turbo run test:run",
     "test:coverage": "turbo run test:coverage",
     "test:coverage:ui": "turbo run test:coverage:ui",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
-    "format": "biome format .",
-    "format:fix": "biome format --write .",
-    "check": "biome check .",
-    "check:fix": "biome check --write .",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run check:fix",
+    "format": "turbo run format",
+    "format:fix": "turbo run check:fix",
+    "check": "turbo run check",
+    "check:fix": "turbo run check:fix",
     "type-check": "turbo run type-check",
     "clean": "turbo run clean",
     "changeset": "changeset",
@@ -36,7 +36,7 @@
     "@vitest/ui": "^3.2.4",
     "jsdom": "^24.1.0",
     "lint-staged": "^16.2.3",
-    "turbo": "^1.13.4",
+    "turbo": "^2.5.8",
     "typescript": "^5.4.5",
     "vitest": "^3.2.4"
   },
@@ -45,8 +45,7 @@
   ],
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "biome check --write",
-      "biome format --write"
+      "biome check --write"
     ],
     "*.{json,md,yml,yaml}": [
       "biome format --write"

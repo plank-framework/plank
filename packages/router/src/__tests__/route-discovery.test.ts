@@ -270,5 +270,4 @@ describe('Route Discovery', () => {
       expect(params).toEqual(expected);
     }
   });
-
 });

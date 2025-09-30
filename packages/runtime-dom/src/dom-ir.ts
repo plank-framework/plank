@@ -7,7 +7,16 @@ import { type Effect, effect, type Signal } from '@plank/runtime-core';
 import { unbindElement } from './bindings.js';
 
 export interface DOMOperation {
-  type: 'createElement' | 'createTextNode' | 'appendChild' | 'removeChild' | 'setAttribute' | 'removeAttribute' | 'setProperty' | 'addEventListener' | 'removeEventListener';
+  type:
+    | 'createElement'
+    | 'createTextNode'
+    | 'appendChild'
+    | 'removeChild'
+    | 'setAttribute'
+    | 'removeAttribute'
+    | 'setProperty'
+    | 'addEventListener'
+    | 'removeEventListener';
   tag?: string;
   text?: string;
   attributes?: Record<string, string>;
@@ -29,7 +38,6 @@ export interface DOMExecutionContext {
  * Execute DOM operations from IR
  */
 export function executeDOMIR(operations: DOMOperation[], _context: DOMExecutionContext): void {
-
   for (const operation of operations) {
     try {
       executeOperation(operation, _context);
@@ -179,7 +187,10 @@ function executeOperation(operation: DOMOperation, _context: DOMExecutionContext
       executeRemoveEventListener(operation);
       break;
     default:
-      console.warn('Unknown DOM operation type:', (operation as DOMOperation & { type: string }).type);
+      console.warn(
+        'Unknown DOM operation type:',
+        (operation as DOMOperation & { type: string }).type
+      );
   }
 }
 

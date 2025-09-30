@@ -14,7 +14,9 @@ describe('Router Integration Tests', () => {
 
   afterEach(async () => {
     if (tempDir) {
-      await import('node:fs/promises').then(fs => fs.rm(tempDir, { recursive: true, force: true }));
+      await import('node:fs/promises').then((fs) =>
+        fs.rm(tempDir, { recursive: true, force: true })
+      );
     }
   });
 
@@ -57,7 +59,10 @@ describe('Router Integration Tests', () => {
 
     // Test route discovery
     const routes = router.getRoutes();
-    console.log('Router routes:', routes.map(r => ({ path: r.path, filePath: r.filePath })));
+    console.log(
+      'Router routes:',
+      routes.map((r) => ({ path: r.path, filePath: r.filePath }))
+    );
     expect(routes.length).toBeGreaterThan(0);
 
     // Test route matching with actual routes
@@ -148,7 +153,10 @@ describe('Router Integration Tests', () => {
     // Multiple dynamic segments
     await mkdir(join(routesDir, 'posts'), { recursive: true });
     await mkdir(join(routesDir, 'posts', '[category]'), { recursive: true });
-    await writeFile(join(routesDir, 'posts', '[category]', '[slug].plk'), '<h1>Post {category}/{slug}</h1>');
+    await writeFile(
+      join(routesDir, 'posts', '[category]', '[slug].plk'),
+      '<h1>Post {category}/{slug}</h1>'
+    );
 
     // Catch-all route
     await mkdir(join(routesDir, 'docs'), { recursive: true });
@@ -157,13 +165,19 @@ describe('Router Integration Tests', () => {
     // Optional parameter route
     await mkdir(join(routesDir, 'api'), { recursive: true });
     await mkdir(join(routesDir, 'api', '[[version]]'), { recursive: true });
-    await writeFile(join(routesDir, 'api', '[[version]]', 'users.plk'), '<h1>API Users {version}</h1>');
+    await writeFile(
+      join(routesDir, 'api', '[[version]]', 'users.plk'),
+      '<h1>API Users {version}</h1>'
+    );
 
     // Complex nested dynamic route
     await mkdir(join(routesDir, 'admin'), { recursive: true });
     await mkdir(join(routesDir, 'admin', '[section]'), { recursive: true });
     await mkdir(join(routesDir, 'admin', '[section]', '[action]'), { recursive: true });
-    await writeFile(join(routesDir, 'admin', '[section]', '[action]', 'index.plk'), '<h1>Admin {section}/{action}</h1>');
+    await writeFile(
+      join(routesDir, 'admin', '[section]', '[action]', 'index.plk'),
+      '<h1>Admin {section}/{action}</h1>'
+    );
 
     const config: RouterConfig = {
       routesDir,
@@ -177,7 +191,6 @@ describe('Router Integration Tests', () => {
 
     const router = new FileBasedRouter(config);
     await router.initialize();
-
 
     // Test 1: Simple dynamic parameter
     const userMatch = router.match('/user/123');
@@ -263,7 +276,10 @@ describe('Router Integration Tests', () => {
     await mkdir(join(routesDir, 'user'), { recursive: true });
     await mkdir(join(routesDir, 'user', '[userId]'), { recursive: true });
     await mkdir(join(routesDir, 'user', '[userId]', 'post'), { recursive: true });
-    await writeFile(join(routesDir, 'user', '[userId]', 'post', '[postId].plk'), '<h1>User {userId} Post {postId}</h1>');
+    await writeFile(
+      join(routesDir, 'user', '[userId]', 'post', '[postId].plk'),
+      '<h1>User {userId} Post {postId}</h1>'
+    );
 
     // Catch-all with special characters
     await mkdir(join(routesDir, 'files'), { recursive: true });
@@ -273,7 +289,10 @@ describe('Router Integration Tests', () => {
     await mkdir(join(routesDir, 'api'), { recursive: true });
     await mkdir(join(routesDir, 'api', '[[version]]'), { recursive: true });
     await mkdir(join(routesDir, 'api', '[[version]]', 'data'), { recursive: true });
-    await writeFile(join(routesDir, 'api', '[[version]]', 'data', '[type].plk'), '<h1>API {version} Data {type}</h1>');
+    await writeFile(
+      join(routesDir, 'api', '[[version]]', 'data', '[type].plk'),
+      '<h1>API {version} Data {type}</h1>'
+    );
 
     const config: RouterConfig = {
       routesDir,
@@ -377,7 +396,10 @@ describe('Router Integration Tests', () => {
 
     // Debug: Check what routes were discovered
     const routes = router.getRoutes();
-    console.log('Search test routes:', routes.map(r => ({ path: r.path, filePath: r.filePath })));
+    console.log(
+      'Search test routes:',
+      routes.map((r) => ({ path: r.path, filePath: r.filePath }))
+    );
 
     // Test query parameter extraction
     const searchMatch = router.match('/search?q=hello&page=2&filter=active');
@@ -476,27 +498,27 @@ describe('Router Integration Tests', () => {
     expect(files.length).toBeGreaterThan(0);
 
     // Test that different file types are detected
-    const pageFiles = files.filter(f => f.type === 'page');
-    const layoutFiles = files.filter(f => f.type === 'layout');
+    const pageFiles = files.filter((f) => f.type === 'page');
+    const layoutFiles = files.filter((f) => f.type === 'layout');
 
     expect(pageFiles.length).toBeGreaterThan(0);
     // Layout files should be in layouts directory, not routes directory
     expect(layoutFiles.length).toBe(0);
 
     // Test that dynamic routes are detected
-    const dynamicFiles = files.filter(f => f.isDynamic);
+    const dynamicFiles = files.filter((f) => f.isDynamic);
     expect(dynamicFiles.length).toBeGreaterThan(0);
 
     // Test that catch-all routes are detected
-    const catchAllFiles = files.filter(f => f.isCatchAll);
+    const catchAllFiles = files.filter((f) => f.isCatchAll);
     expect(catchAllFiles.length).toBeGreaterThan(0);
 
     // Test parameter extraction
-    const userFile = files.find(f => f.routePath === '/users/[id]');
+    const userFile = files.find((f) => f.routePath === '/users/[id]');
     expect(userFile).toBeDefined();
     expect(userFile?.params).toContain('id');
 
-    const postFile = files.find(f => f.routePath === '/posts/[...slug]');
+    const postFile = files.find((f) => f.routePath === '/posts/[...slug]');
     expect(postFile).toBeDefined();
     expect(postFile?.params).toContain('...slug');
   });
@@ -531,43 +553,43 @@ describe('Router Integration Tests', () => {
     // Verify initial routes
     const initialRoutes = router.getRoutes();
     expect(initialRoutes).toHaveLength(2);
-    expect(initialRoutes.some(r => r.path === '/')).toBe(true);
-    expect(initialRoutes.some(r => r.path === '/about')).toBe(true);
+    expect(initialRoutes.some((r) => r.path === '/')).toBe(true);
+    expect(initialRoutes.some((r) => r.path === '/about')).toBe(true);
 
     // Test 1: Add a new route file
     await writeFile(join(routesDir, 'contact.plk'), '<h1>Contact</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify new route was discovered
     const routesAfterAdd = router.getRoutes();
     expect(routesAfterAdd).toHaveLength(3);
-    expect(routesAfterAdd.some(r => r.path === '/contact')).toBe(true);
+    expect(routesAfterAdd.some((r) => r.path === '/contact')).toBe(true);
 
     // Test 2: Create a new directory with a route
     await mkdir(join(routesDir, 'products'), { recursive: true });
     await writeFile(join(routesDir, 'products', 'index.plk'), '<h1>Products</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify new route was discovered
     const routesAfterDir = router.getRoutes();
     expect(routesAfterDir).toHaveLength(4);
-    expect(routesAfterDir.some(r => r.path === '/products')).toBe(true);
+    expect(routesAfterDir.some((r) => r.path === '/products')).toBe(true);
 
     // Test 3: Create a dynamic route
     await mkdir(join(routesDir, 'product'), { recursive: true });
     await writeFile(join(routesDir, 'product', '[id].plk'), '<h1>Product {id}</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify dynamic route was discovered
     const routesAfterDynamic = router.getRoutes();
     expect(routesAfterDynamic).toHaveLength(5);
-    const dynamicRoute = routesAfterDynamic.find(r => r.path === '/product/[id]');
+    const dynamicRoute = routesAfterDynamic.find((r) => r.path === '/product/[id]');
     expect(dynamicRoute).toBeDefined();
     expect(dynamicRoute?.isDynamic).toBe(true);
 
@@ -576,12 +598,12 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'docs', '[...slug].plk'), '<h1>Docs {slug}</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify catch-all route was discovered
     const routesAfterCatchAll = router.getRoutes();
     expect(routesAfterCatchAll).toHaveLength(6);
-    const catchAllRoute = routesAfterCatchAll.find(r => r.path === '/docs/[...slug]');
+    const catchAllRoute = routesAfterCatchAll.find((r) => r.path === '/docs/[...slug]');
     expect(catchAllRoute).toBeDefined();
     expect(catchAllRoute?.isCatchAll).toBe(true);
 
@@ -589,35 +611,35 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'about.plk'), '<h1>About Us - Updated</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify route still exists (modification doesn't change route structure)
     const routesAfterModify = router.getRoutes();
     expect(routesAfterModify).toHaveLength(6);
-    expect(routesAfterModify.some(r => r.path === '/about')).toBe(true);
+    expect(routesAfterModify.some((r) => r.path === '/about')).toBe(true);
 
     // Test 6: Delete a route file
     await unlink(join(routesDir, 'contact.plk'));
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify route was removed
     const routesAfterDelete = router.getRoutes();
     expect(routesAfterDelete).toHaveLength(5);
-    expect(routesAfterDelete.some(r => r.path === '/contact')).toBe(false);
+    expect(routesAfterDelete.some((r) => r.path === '/contact')).toBe(false);
 
     // Test 7: Delete a directory with routes
     await unlink(join(routesDir, 'product', '[id].plk'));
     await rmdir(join(routesDir, 'product'));
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify route was removed
     const routesAfterDirDelete = router.getRoutes();
     expect(routesAfterDirDelete).toHaveLength(4);
-    expect(routesAfterDirDelete.some(r => r.path === '/product/[id]')).toBe(false);
+    expect(routesAfterDirDelete.some((r) => r.path === '/product/[id]')).toBe(false);
 
     // Test 8: Test route matching still works after changes
     const homeMatch = router.match('/');
@@ -689,12 +711,12 @@ describe('Router Integration Tests', () => {
     await writeFile(join(layoutsDir, 'admin', 'layout.plk'), '<div class="admin">{children}</div>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify new layout was discovered
     const layoutsAfterAdd = router.getLayouts();
     expect(layoutsAfterAdd).toHaveLength(2);
-    const adminLayout = layoutsAfterAdd.find(l => l.filePath.includes('admin/layout.plk'));
+    const adminLayout = layoutsAfterAdd.find((l) => l.filePath.includes('admin/layout.plk'));
     expect(adminLayout).toBeDefined();
     expect(adminLayout?.isRoot).toBe(false);
 
@@ -702,32 +724,35 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'about.plk'), '<h1>About</h1>');
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify route was added and associated with root layout
     const routesAfterRoute = router.getRoutes();
     expect(routesAfterRoute).toHaveLength(2);
-    const aboutRoute = routesAfterRoute.find(r => r.path === '/about');
+    const aboutRoute = routesAfterRoute.find((r) => r.path === '/about');
     expect(aboutRoute).toBeDefined();
     expect(aboutRoute?.layoutPath).toBeDefined();
 
     // Test 3: Modify a layout file
-    await writeFile(join(layoutsDir, 'layout.plk'), '<html><head><title>Updated</title></head>{children}</html>');
+    await writeFile(
+      join(layoutsDir, 'layout.plk'),
+      '<html><head><title>Updated</title></head>{children}</html>'
+    );
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify layout still exists (modification doesn't change layout structure)
     const layoutsAfterModify = router.getLayouts();
     expect(layoutsAfterModify).toHaveLength(2);
-    expect(layoutsAfterModify.some(l => l.isRoot)).toBe(true);
+    expect(layoutsAfterModify.some((l) => l.isRoot)).toBe(true);
 
     // Test 4: Delete a layout
     await unlink(join(layoutsDir, 'admin', 'layout.plk'));
     await rmdir(join(layoutsDir, 'admin'));
 
     // Wait for file system event to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Verify layout was removed
     const layoutsAfterDelete = router.getLayouts();
@@ -767,13 +792,13 @@ describe('Router Integration Tests', () => {
     expect(files.length).toBe(3);
 
     // Test complex route paths
-    const apiUserFile = files.find(f => f.routePath === '/api/v1/users/[id]');
+    const apiUserFile = files.find((f) => f.routePath === '/api/v1/users/[id]');
     expect(apiUserFile).toBeDefined();
 
-    const adminFile = files.find(f => f.routePath === '/admin/settings');
+    const adminFile = files.find((f) => f.routePath === '/admin/settings');
     expect(adminFile).toBeDefined();
 
-    const blogFile = files.find(f => f.routePath === '/blog/categories/[...slug]');
+    const blogFile = files.find((f) => f.routePath === '/blog/categories/[...slug]');
     expect(blogFile).toBeDefined();
     expect(blogFile?.isCatchAll).toBe(true);
   });

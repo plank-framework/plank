@@ -408,6 +408,4 @@ describe('FileBasedRouter', () => {
     expect(mockMkdir).toHaveBeenCalled();
     expect(mockWriteFile).toHaveBeenCalled();
   });
-
-
 });

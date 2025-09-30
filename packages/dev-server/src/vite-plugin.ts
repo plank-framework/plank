@@ -472,7 +472,18 @@ function generateImportStatements(
 /**
  * Generate mount function from template directives using runtime bindings
  */
-function generateMountFunction(content: string, _scripts: unknown[]): string {
+function generateMountFunction(content: string, scripts: unknown[]): string {
+  // Check if the island already has a mount function defined
+  const hasManualMount = scripts.some(script => {
+    const scriptContent = extractScriptContent(script);
+    return scriptContent?.includes('export function mount') || scriptContent?.includes('export const mount');
+  });
+
+  // If a manual mount function exists, don't generate one
+  if (hasManualMount) {
+    return '';
+  }
+
   // IMPORTANT: Extract directives BEFORE stripping them from HTML!
   const htmlWithDirectives = content
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');

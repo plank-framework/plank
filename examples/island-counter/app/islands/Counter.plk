@@ -1,7 +1,7 @@
 <!-- Counter Island Component -->
 <script type="client">
 import { signal } from '@plank/runtime-core';
-import { bindText, bindAttribute } from '@plank/runtime-dom';
+import { bindText, bindEvent } from '@plank/runtime-dom';
 
 export function mount(element, props) {
   const count = signal(0);
@@ -10,16 +10,16 @@ export function mount(element, props) {
   bindText(element.querySelector('.count'), count);
 
   // Bind click handlers
-  bindAttribute(element.querySelector('.increment'), 'onclick', () => {
-    count.value++;
+  bindEvent(element.querySelector('.increment'), 'click', () => {
+    count(count() + 1);
   });
 
-  bindAttribute(element.querySelector('.decrement'), 'onclick', () => {
-    count.value--;
+  bindEvent(element.querySelector('.decrement'), 'click', () => {
+    count(count() - 1);
   });
 
-  bindAttribute(element.querySelector('.reset'), 'onclick', () => {
-    count.value = 0;
+  bindEvent(element.querySelector('.reset'), 'click', () => {
+    count(0);
   });
 
   return {

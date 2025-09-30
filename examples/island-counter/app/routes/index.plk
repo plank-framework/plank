@@ -24,47 +24,35 @@
       <div class="demo-card">
         <h3>Counter (Load)</h3>
         <p>This counter loads immediately when the page loads.</p>
-        <div class="loading-placeholder">
-          Loading counter...
-        </div>
-        <!-- This would be replaced by the actual island -->
-        <div style="background: #d1fae5; border: 1px solid #10b981; padding: 1rem; border-radius: 0.25rem; margin-top: 1rem;">
-          <strong>Counter Island (client:load)</strong><br>
-          Count: 0<br>
-          <button style="background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; margin-top: 0.5rem;">Increment</button>
-        </div>
+        <island src="./islands/Counter.plk" client:load>
+          <div class="loading-placeholder">
+            Loading counter...
+          </div>
+        </island>
       </div>
 
       <div class="demo-card">
         <h3>Timer (Idle)</h3>
         <p>This timer loads when the browser is idle.</p>
-        <div class="loading-placeholder">
-          Loading timer...
-        </div>
-        <!-- This would be replaced by the actual island -->
-        <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 1rem; border-radius: 0.25rem; margin-top: 1rem;">
-          <strong>Timer Island (client:idle)</strong><br>
-          Time: 0s<br>
-          <button style="background: #f59e0b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; margin-top: 0.5rem;">Start</button>
-        </div>
+        <island src="./islands/Timer.plk" client:idle>
+          <div class="loading-placeholder">
+            Loading timer...
+          </div>
+        </island>
       </div>
 
       <div class="demo-card">
         <h3>Chart (Visible)</h3>
         <p>This chart loads when it becomes visible in the viewport.</p>
-        <div class="loading-placeholder">
-          Loading chart...
-        </div>
-        <!-- This would be replaced by the actual island -->
-        <div style="background: #e0e7ff; border: 1px solid #6366f1; padding: 1rem; border-radius: 0.25rem; margin-top: 1rem;">
-          <strong>Chart Island (client:visible)</strong><br>
-          <div style="height: 100px; background: linear-gradient(45deg, #6366f1, #8b5cf6); border-radius: 0.25rem; margin-top: 0.5rem;"></div>
-        </div>
+        <island src="./islands/Chart.plk" client:visible>
+          <div class="loading-placeholder">
+            Loading chart...
+          </div>
+        </island>
       </div>
     </div>
 
-    <div class="code-block">
-&lt;!-- Counter loads immediately --&gt;
+    <pre class="code-block"><code>&lt;!-- Counter loads immediately --&gt;
 &lt;island src="./Counter.plk" client:load&gt;
   &lt;div&gt;Loading counter...&lt;/div&gt;
 &lt;/island&gt;
@@ -77,8 +65,7 @@
 &lt;!-- Chart loads when visible --&gt;
 &lt;island src="./Chart.plk" client:visible&gt;
   &lt;div&gt;Loading chart...&lt;/div&gt;
-&lt;/island&gt;
-    </div>
+&lt;/island&gt;</code></pre>
 
     <div style="background: #f0f9ff; border: 1px solid #0ea5e9; padding: 1.5rem; border-radius: 0.5rem; margin-top: 2rem;">
       <h3 style="color: #0c4a6e; margin-bottom: 1rem;">Performance Benefits</h3>

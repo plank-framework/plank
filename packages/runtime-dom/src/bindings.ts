@@ -369,6 +369,27 @@ export function registerBinding(element: Element, effect: Effect): void {
 }
 
 /**
+ * Bind an event handler to an element
+ */
+export function bindEvent(
+  element: Element,
+  event: string,
+  handler: (event: Event) => void
+): Effect {
+  element.addEventListener(event, handler);
+
+  const effectObj = {
+    stop: () => {
+      element.removeEventListener(event, handler);
+    },
+    isActive: true,
+  } as Effect;
+
+  registerBinding(element, effectObj);
+  return effectObj;
+}
+
+/**
  * Remove all bindings from an element
  */
 export function unbindElement(element: Element): void {

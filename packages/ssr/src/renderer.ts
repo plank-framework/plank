@@ -244,7 +244,13 @@ export class SSRRenderer {
    */
   private renderNode(node: TemplateNode, context: SSRContext, writer: StreamingWriter): void {
     if (node.type === 'element') {
-      this.renderElement(node, context, writer);
+      // Check if this is an island element
+      // biome-ignore lint/suspicious/noExplicitAny: Allow any type for island node
+      if (node.tag === 'island' || (node as any).island) {
+        this.renderIsland(node as IslandNode, context, writer);
+      } else {
+        this.renderElement(node, context, writer);
+      }
     } else if (node.type === 'text') {
       writer.writeEscaped(node.text || '');
     } else if (node.type === 'comment') {
@@ -305,13 +311,10 @@ export class SSRRenderer {
    * Render island component
    */
   private renderIsland(node: IslandNode, context: SSRContext, writer: StreamingWriter): void {
-    const islandId = `island-${Math.random().toString(36).substr(2, 9)}`;
+    const src = node.island?.src || '';
+    const strategy = node.island?.strategy || 'load';
 
-    writer.write(`<div data-island="${islandId}" data-src="${node.island?.src || ''}"`);
-
-    if (node.island?.strategy) {
-      writer.write(` data-strategy="${node.island.strategy}"`);
-    }
+    writer.write(`<div data-island="${src}" data-strategy="${strategy}"`);
 
     if (node.props) {
       writer.write(` data-props="`);
@@ -321,7 +324,8 @@ export class SSRRenderer {
 
     writer.write('>');
 
-    // Render placeholder content
+    // For now, render placeholder content
+    // TODO: Implement proper island SSR rendering
     if (node.children && node.children.length > 0) {
       for (const child of node.children) {
         this.renderNode(child, context, writer);
@@ -596,16 +600,17 @@ export class SSRRenderer {
   private generateProgressiveEnhancementScript(): string {
     return `<script type="module">
       // Progressive enhancement for Plank SSR
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('${this.config.baseUrl}/sw.js').catch(() => {
-          // Service worker registration failed, continue without it
-        });
-      }
+      // TODO: Implement service worker for offline support
+      // if ('serviceWorker' in navigator) {
+      //   navigator.serviceWorker.register('${this.config.baseUrl}/sw.js').catch(() => {
+      //     // Service worker registration failed, continue without it
+      //   });
+      // }
 
       // Preload critical resources
       const link = document.createElement('link');
       link.rel = 'modulepreload';
-      link.href = '${this.config.baseUrl}/@plank/runtime-dom';
+      link.href = '${this.config.baseUrl}/node_modules/@plank/runtime-dom/dist/index.js';
       document.head.appendChild(link);
 
       // Add error boundary for client-side errors
@@ -628,7 +633,7 @@ export class SSRRenderer {
   private generateIslandHydrationScript(_islands: string[]): string {
     return `<script type="module">
       // Island hydration for Plank SSR
-      import { hydrateIslands } from '${this.config.baseUrl}/@plank/runtime-dom';
+      import { hydrateIslands } from '${this.config.baseUrl}/node_modules/@plank/runtime-dom/dist/index.js';
 
       // Hydrate islands when DOM is ready
       if (document.readyState === 'loading') {

@@ -15,6 +15,7 @@ export interface IslandComponent<T = Record<string, unknown>> {
   mount: (element: Element, props?: T) => Effect;
   unmount: () => void;
   update?: (props: T) => void;
+  template?: string;
 }
 
 export interface IslandRegistry {
@@ -110,8 +111,10 @@ export async function mountIsland<T = Record<string, unknown>>(
   try {
     const component = await loadIsland<T>(src);
 
-    // Clear fallback content
-    element.innerHTML = '';
+    // If the component has a template, replace the placeholder content BEFORE mounting
+    if (component.template && typeof component.template === 'string') {
+      element.innerHTML = component.template;
+    }
 
     // Mount the component
     const effect = component.mount(element, props);
@@ -374,4 +377,17 @@ export function createComputedIsland<T = Record<string, unknown>>(
   });
 
   return element;
+}
+
+/**
+ * Hydrate all islands on the page
+ * This is the main entry point for island hydration
+ */
+export async function hydrateIslands(): Promise<void> {
+  try {
+    const effects = await initializeAllIslands();
+    console.log(`Hydrated ${effects.length} islands`);
+  } catch (error) {
+    console.error('Failed to hydrate islands:', error);
+  }
 }

@@ -1,7 +1,7 @@
 <!-- Timer Island Component -->
 <script type="client">
 import { signal } from '@plank/runtime-core';
-import { bindText, bindAttribute } from '@plank/runtime-dom';
+import { bindText, bindEvent } from '@plank/runtime-dom';
 
 export function mount(element, props) {
   const time = signal(0);
@@ -10,21 +10,21 @@ export function mount(element, props) {
 
   // Bind text content
   bindText(element.querySelector('.time'), time);
-  bindText(element.querySelector('.status'), () => isRunning.value ? 'Running' : 'Stopped');
+  bindText(element.querySelector('.status'), () => isRunning() ? 'Running' : 'Stopped');
 
   // Bind click handlers
-  bindAttribute(element.querySelector('.start'), 'onclick', () => {
-    if (!isRunning.value) {
-      isRunning.value = true;
+  bindEvent(element.querySelector('.start'), 'click', () => {
+    if (!isRunning()) {
+      isRunning(true);
       intervalId = setInterval(() => {
-        time.value++;
+        time(time() + 1);
       }, 1000);
     }
   });
 
-  bindAttribute(element.querySelector('.stop'), 'onclick', () => {
-    if (isRunning.value) {
-      isRunning.value = false;
+  bindEvent(element.querySelector('.stop'), 'click', () => {
+    if (isRunning()) {
+      isRunning(false);
       if (intervalId) {
         clearInterval(intervalId);
         intervalId = null;
@@ -32,9 +32,9 @@ export function mount(element, props) {
     }
   });
 
-  bindAttribute(element.querySelector('.reset'), 'onclick', () => {
-    isRunning.value = false;
-    time.value = 0;
+  bindEvent(element.querySelector('.reset'), 'click', () => {
+    isRunning(false);
+    time(0);
     if (intervalId) {
       clearInterval(intervalId);
       intervalId = null;

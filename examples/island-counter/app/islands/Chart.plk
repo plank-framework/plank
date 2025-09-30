@@ -1,7 +1,7 @@
 <!-- Chart Island Component -->
 <script type="client">
 import { signal } from '@plank/runtime-core';
-import { bindAttribute } from '@plank/runtime-dom';
+import { bindEvent } from '@plank/runtime-dom';
 
 export function mount(element, props) {
   const data = signal([30, 45, 60, 35, 80, 25, 90]);
@@ -11,7 +11,7 @@ export function mount(element, props) {
   const ctx = canvas.getContext('2d');
 
   function drawChart() {
-    const values = data.value;
+    const values = data();
     const maxValue = Math.max(...values);
     const barWidth = canvas.width / values.length;
 
@@ -23,7 +23,7 @@ export function mount(element, props) {
       const y = canvas.height - barHeight;
 
       // Color based on selection
-      if (index === selectedIndex.value) {
+      if (index === selectedIndex()) {
         ctx.fillStyle = '#ef4444';
       } else {
         ctx.fillStyle = `hsl(${200 + index * 30}, 70%, 60%)`;
@@ -40,27 +40,27 @@ export function mount(element, props) {
   }
 
   // Bind click handler for chart interaction
-  bindAttribute(canvas, 'onclick', (event) => {
+  bindEvent(canvas, 'click', (event) => {
     const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
-    const barWidth = canvas.width / data.value.length;
+    const barWidth = canvas.width / data().length;
     const clickedIndex = Math.floor(x / barWidth);
 
-    if (clickedIndex >= 0 && clickedIndex < data.value.length) {
-      selectedIndex.value = selectedIndex.value === clickedIndex ? -1 : clickedIndex;
+    if (clickedIndex >= 0 && clickedIndex < data().length) {
+      selectedIndex(selectedIndex() === clickedIndex ? -1 : clickedIndex);
       drawChart();
     }
   });
 
   // Bind button handlers
-  bindAttribute(element.querySelector('.randomize'), 'onclick', () => {
-    data.value = data.value.map(() => Math.floor(Math.random() * 100) + 10);
-    selectedIndex.value = -1;
+  bindEvent(element.querySelector('.randomize'), 'click', () => {
+    data(data().map(() => Math.floor(Math.random() * 100) + 10));
+    selectedIndex(-1);
     drawChart();
   });
 
-  bindAttribute(element.querySelector('.add-data'), 'onclick', () => {
-    data.value = [...data.value, Math.floor(Math.random() * 100) + 10];
+  bindEvent(element.querySelector('.add-data'), 'click', () => {
+    data([...data(), Math.floor(Math.random() * 100) + 10]);
     drawChart();
   });
 

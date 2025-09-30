@@ -521,13 +521,13 @@ describe('Plank Parser', () => {
     expect(div?.children).toHaveLength(3);
 
     const p1 = div?.children?.[0];
-    expect(p1?.children?.[0]?.text).toBe('Text with &amp; entities');
+    expect(p1?.children?.[0]?.text).toBe('Text with & entities');
 
     const p2 = div?.children?.[1];
-    expect(p2?.children?.[0]?.text).toBe('Text with &lt; and &gt; symbols');
+    expect(p2?.children?.[0]?.text).toBe('Text with < and > symbols');
 
     const p3 = div?.children?.[2];
-    expect(p3?.children?.[0]?.text).toBe('Text with &quot;quotes&quot; and &apos;apostrophes&apos;');
+    expect(p3?.children?.[0]?.text).toBe('Text with "quotes" and \'apostrophes\'');
   });
 
   test('should handle attributes with special characters', () => {
@@ -551,7 +551,7 @@ describe('Plank Parser', () => {
     expect(input?.attributes?.['data-special']).toBe('special&chars');
 
     const button = div?.children?.[1];
-    expect(button?.attributes?.title).toBe('Button with &quot;quotes&quot;');
+    expect(button?.attributes?.title).toBe('Button with "quotes"');
   });
 });
 

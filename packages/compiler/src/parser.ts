@@ -228,8 +228,10 @@ export class PlankParser {
     }
 
     // Handle string literals
-    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-        (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
       return {
         type: 'string',
         value: trimmed.slice(1, -1),

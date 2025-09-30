@@ -24,8 +24,11 @@
     "test:coverage": "vitest run --coverage",
     "test:coverage:ui": "vitest run --coverage --ui"
   },
-  "devDependencies": {},
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "domhandler": "^5.0.3",
+    "htmlparser2": "^10.0.0"
   }
 }

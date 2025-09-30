@@ -1,8 +1,10 @@
 /**
- * @fileoverview Working HTML parser for Plank templates
- * A simple, robust implementation
+ * @fileoverview Hybrid HTML parser for Plank templates
+ * Uses htmlparser2 for robust HTML parsing + custom logic for Plank features
  */
 
+import type { Element, Node, Text } from 'domhandler';
+import { parseDocument } from 'htmlparser2';
 import {
   type DirectiveNode,
   getDirectiveType,
@@ -30,7 +32,7 @@ export interface HTMLParseResult {
   errors: Array<{ message: string; line: number; column: number; filename?: string | undefined }>;
 }
 
-export class WorkingHTMLParser {
+export class HybridHTMLParser {
   private source: string;
   private filename?: string | undefined;
   private dev: boolean;
@@ -41,9 +43,6 @@ export class WorkingHTMLParser {
     filename?: string | undefined;
   }> = [];
   private scripts: ScriptNode[] = [];
-  private pos = 0;
-  private line = 1;
-  private column = 1;
 
   constructor(source: string, options: HTMLParseOptions = {}) {
     this.source = source;
@@ -52,24 +51,32 @@ export class WorkingHTMLParser {
   }
 
   /**
-   * Parse HTML source into AST
+   * Parse HTML source into AST using hybrid approach
    */
   parse(): HTMLParseResult {
     this.errors = [];
     this.scripts = [];
-    this.pos = 0;
-    this.line = 1;
-    this.column = 1;
 
     try {
-      const ast = this.parseTemplate();
+      // Step 1: Parse HTML structure with htmlparser2
+      const htmlAst = parseDocument(this.source, {
+        lowerCaseTags: false,
+        lowerCaseAttributeNames: false,
+        withStartIndices: true,
+        withEndIndices: true,
+        decodeEntities: true,
+      });
+
+      // Step 2: Transform to Plank AST
+      const plankAst = this.transformToPlankAST(htmlAst);
+
       return {
-        ast,
+        ast: plankAst,
         scripts: this.scripts,
         errors: this.errors,
       };
     } catch (error) {
-      this.addError(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
+      this.addError(`Parse error: ${error instanceof Error ? error.message : String(error)}`, 1, 1);
       return {
         ast: { type: 'template', children: [] },
         scripts: [],
@@ -78,305 +85,166 @@ export class WorkingHTMLParser {
     }
   }
 
-  private parseTemplate(): TemplateNode {
-    const template: TemplateNode = {
-      type: 'template',
-      children: [],
-    };
+  /**
+   * Transform htmlparser2 AST to Plank TemplateNode format
+   */
+  private transformToPlankAST(node: Node): TemplateNode {
+    // Handle document/root node
+    if (node.type === 'root') {
+      const rootNode = node as unknown as { children: Node[] };
+      const children = rootNode.children
+        .map((child: Node) => this.transformToPlankAST(child))
+        .filter((n: TemplateNode | null): n is TemplateNode => n !== null);
 
-    while (this.pos < this.source.length) {
-      this.skipWhitespace();
-      if (this.pos >= this.source.length) break;
-
-      const node = this.parseTemplateNode();
-      if (node) {
-        template.children?.push(node);
-      }
+      return {
+        type: 'template',
+        children,
+      };
     }
 
-    return template;
-  }
+    // Handle text nodes
+    if (node.type === 'text') {
+      const textNode = node as Text;
+      const text = textNode.data.trim();
+      if (!text) return null as unknown as TemplateNode; // Skip empty text nodes
 
-  private parseTemplateNode(): TemplateNode | null {
-    if (this.source[this.pos] !== '<') {
-      return this.parseText();
+      return {
+        type: 'text',
+        text,
+      };
     }
 
-    if (this.source.slice(this.pos, this.pos + 4) === '<!--') {
-      this.parseComment();
-      return null;
-    }
-
-    if (this.source.slice(this.pos, this.pos + 7) === '<script') {
-      const script = this.parseScript();
+    // Handle script nodes (htmlparser2 treats them as a special type)
+    if (node.type === 'script') {
+      const element = node as Element;
+      const script = this.extractScript(element);
       if (script) {
         this.scripts.push(script);
       }
-      return null;
+      return null as unknown as TemplateNode; // Don't include script in AST
     }
 
-    if (this.source[this.pos + 1] === '/') {
-      // Skip closing tags at template level
-      this.skipToNext('>');
-      this.advance(); // Skip the '>'
-      return null;
+    // Handle element nodes
+    if (node.type === 'tag') {
+      const element = node as Element;
+      const { line = 1, column = 1 } = this.getPosition(element);
+
+      // Convert attributes (entities preserved as-is)
+      const attributes: Record<string, string> = { ...element.attribs };
+
+      // Parse children
+      const children = element.children
+        .map((child) => this.transformToPlankAST(child))
+        .filter((n): n is TemplateNode => n !== null);
+
+      // Create base element
+      const plankNode: TemplateNode = {
+        type: 'element',
+        tag: element.name,
+        attributes,
+        children,
+      };
+
+      // Process Plank-specific features
+      this.processDirectives(plankNode, attributes, line, column);
+      this.processIsland(plankNode, element.name, attributes, line, column);
+
+      return plankNode;
     }
 
-    return this.parseElement();
+    // Handle comments - skip them
+    if (node.type === 'comment') {
+      return null as unknown as TemplateNode;
+    }
+
+    // Unknown node type - skip
+    return null as unknown as TemplateNode;
   }
 
-  private parseElement(): TemplateNode | null {
-    if (this.source[this.pos] !== '<') return null;
-
-    this.advance(); // Skip the '<'
-
-    const tagName = this.parseTagName();
-    if (!tagName) {
-      this.addError('Invalid tag name');
-      this.skipToNext('>');
-      this.advance(); // Skip the '>'
-      return null;
-    }
-
-    const attributes = this.parseAttributes();
-
-    if (this.source.slice(this.pos, this.pos + 2) === '/>') {
-      // Self-closing tag
-      this.advance(2);
-      return this.createElement(tagName, attributes, true);
-    } else if (this.source[this.pos] === '>') {
-      // Regular tag with content
-      this.advance(); // Skip the '>'
-      const element = this.createElement(tagName, attributes, false);
-
-      // Check if this is a self-closing HTML element
-      if (this.isSelfClosingElement(tagName)) {
-        // Treat as self-closing even without />
-        return element;
+  /**
+   * Process Plank directives (on:, bind:, x:if, etc.)
+   */
+  private processDirectives(
+    node: TemplateNode,
+    attributes: Record<string, string>,
+    line: number,
+    column: number
+  ): void {
+    for (const [name, value] of Object.entries(attributes)) {
+      // Check if this looks like a directive but is invalid
+      // Skip validation for island loading strategies
+      if (name.includes(':') && !isValidDirective(name) && !isValidIslandStrategy(name)) {
+        this.addError(`Invalid directive: ${name}`, line, column);
       }
 
-      element.children = this.parseElementContent(tagName);
-      return element;
-    } else {
-      this.addError('Invalid tag syntax');
-      this.skipToNext('>');
-      this.advance(); // Skip the '>'
-      return null;
+      const directiveType = getDirectiveType(name);
+      if (directiveType) {
+        node.directive = this.parseDirective(directiveType, name, value);
+      }
     }
   }
 
-  private parseTagName(): string | null {
-    const start = this.pos;
-    while (this.pos < this.source.length) {
-      const char = this.source[this.pos];
-      if (!char || !/[a-zA-Z0-9-]/.test(char)) break;
-      this.advance();
+  /**
+   * Process island elements
+   */
+  private processIsland(
+    node: TemplateNode,
+    tagName: string,
+    attributes: Record<string, string>,
+    line: number,
+    column: number
+  ): void {
+    if (tagName !== 'island') return;
+
+    const src = attributes.src;
+    if (!src) {
+      this.addError('Island missing required "src" attribute', line, column);
+      node.island = { src: '', strategy: 'load' };
+      return;
     }
 
-    if (this.pos === start) return null;
-    return this.source.slice(start, this.pos);
-  }
-
-  private parseAttributes(): Record<string, string> {
-    const attributes: Record<string, string> = {};
-
-    while (this.pos < this.source.length) {
-      this.skipWhitespace();
-
-      if (this.source.slice(this.pos, this.pos + 2) === '/>' || this.source[this.pos] === '>') {
+    // Determine loading strategy
+    let strategy: IslandNode['strategy'] = 'load';
+    for (const attr of Object.keys(attributes)) {
+      if (isValidIslandStrategy(attr)) {
+        strategy = ISLAND_STRATEGIES[attr as keyof typeof ISLAND_STRATEGIES];
         break;
       }
-
-      const name = this.parseAttributeName();
-      if (!name) break;
-
-      let value = '';
-      if (this.source[this.pos] === '=') {
-        this.advance(); // Skip the '='
-        value = this.parseAttributeValue();
-      }
-
-      attributes[name] = value;
     }
 
-    return attributes;
+    node.island = { src, strategy };
   }
 
-  private parseAttributeName(): string | null {
-    const start = this.pos;
-    while (this.pos < this.source.length) {
-      const char = this.source[this.pos];
-      if (!char || !/[a-zA-Z0-9-:]/.test(char)) break;
-      this.advance();
-    }
-
-    if (this.pos === start) return null;
-    return this.source.slice(start, this.pos);
-  }
-
-  private parseAttributeValue(): string {
-    if (this.source[this.pos] === '"') {
-      return this.parseQuotedString('"');
-    } else if (this.source[this.pos] === "'") {
-      return this.parseQuotedString("'");
-    } else {
-      // Unquoted value
-      const start = this.pos;
-      while (this.pos < this.source.length) {
-        const char = this.source[this.pos];
-        if (!char || /[>\s]/.test(char)) break;
-        this.advance();
-      }
-      return this.source.slice(start, this.pos);
-    }
-  }
-
-  private parseQuotedString(quote: string): string {
-    this.advance(); // Skip opening quote
-    const start = this.pos;
-
-    while (this.pos < this.source.length && this.source[this.pos] !== quote) {
-      if (this.source[this.pos] === '\\') {
-        this.advance(); // Skip escaped character
-      }
-      this.advance();
-    }
-
-    const value = this.source.slice(start, this.pos);
-    if (this.pos < this.source.length) {
-      this.advance(); // Skip closing quote
-    }
-
-    return value;
-  }
-
-  private parseElementContent(tagName: string): TemplateNode[] {
-    const children: TemplateNode[] = [];
-
-    while (this.pos < this.source.length) {
-      this.skipWhitespace();
-
-      if (this.isClosingTag(tagName)) {
-        break;
-      }
-
-      const child = this.parseElementChild();
-      if (child) {
-        children.push(child);
-      }
-    }
-
-    return children;
-  }
-
-  private isClosingTag(tagName: string): boolean {
-    if (this.source[this.pos] === '<' && this.source[this.pos + 1] === '/') {
-      const closingTag = `</${tagName}>`;
-      if (this.source.slice(this.pos, this.pos + closingTag.length) === closingTag) {
-        this.advance(closingTag.length);
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private parseElementChild(): TemplateNode | null {
-    if (this.source.slice(this.pos, this.pos + 4) === '<!--') {
-      this.parseComment();
-      return null;
-    }
-
-    if (this.source.slice(this.pos, this.pos + 7) === '<script') {
-      const script = this.parseScript();
-      if (script) {
-        this.scripts.push(script);
-      }
-      return null;
-    }
-
-    if (this.source[this.pos] === '<') {
-      return this.parseElement();
-    }
-
-    return this.parseText();
-  }
-
-  private parseText(): TemplateNode | null {
-    const start = this.pos;
-
-    while (this.pos < this.source.length && this.source[this.pos] !== '<') {
-      this.advance();
-    }
-
-    if (this.pos === start) return null;
-
-    const text = this.source.slice(start, this.pos).trim();
-    if (!text) return null;
-
-    return {
-      type: 'text',
-      text,
-    };
-  }
-
-  private parseComment(): void {
-    // Skip HTML comment
-    while (this.pos < this.source.length && this.source.slice(this.pos, this.pos + 3) !== '-->') {
-      this.advance();
-    }
-    if (this.source.slice(this.pos, this.pos + 3) === '-->') {
-      this.advance(3);
-    }
-  }
-
-  private parseScript(): ScriptNode | null {
-    if (this.source.slice(this.pos, this.pos + 7) !== '<script') return null;
-
-    // Skip <script
-    this.advance(7);
-
-    const attributes = this.parseAttributes();
-
-    if (this.source[this.pos] !== '>') {
-      this.addError('Invalid script tag');
-      this.skipToNext('>');
-      this.advance(); // Skip the '>'
-      return null;
-    }
-
-    this.advance(); // Skip the '>'
-
-    // Parse script content
-    const start = this.pos;
-    while (
-      this.pos < this.source.length &&
-      this.source.slice(this.pos, this.pos + 9) !== '</script>'
-    ) {
-      this.advance();
-    }
-
-    const content = this.source.slice(start, this.pos);
-
-    if (this.source.slice(this.pos, this.pos + 9) === '</script>') {
-      this.advance(9);
-    }
-
-    // Determine script type
+  /**
+   * Extract script node from element
+   */
+  private extractScript(element: Element): ScriptNode | null {
+    const attributes = element.attribs;
     const type = attributes.type === 'server' ? 'server' : 'client';
+
+    // Get script content from text children
+    const content = element.children
+      .filter((child): child is Text => child.type === 'text')
+      .map((child) => child.data)
+      .join('')
+      .trim();
 
     const script: ScriptNode = {
       type,
-      content: content.trim(),
+      content,
     };
 
     // Extract exports for server scripts
     if (type === 'server') {
-      script.exports = this.extractServerExports(content.trim());
+      script.exports = this.extractServerExports(content);
     }
 
     return script;
   }
 
+  /**
+   * Extract server-side exported functions
+   */
   private extractServerExports(content: string): string[] {
     const exports: string[] = [];
     const exportRegex = /export\s+(?:async\s+)?function\s+(\w+)/g;
@@ -391,40 +259,9 @@ export class WorkingHTMLParser {
     return exports;
   }
 
-  private createElement(
-    tagName: string,
-    attributes: Record<string, string>,
-    _selfClosing: boolean
-  ): TemplateNode {
-    const element: TemplateNode = {
-      type: 'element',
-      tag: tagName,
-      attributes,
-      children: [],
-    };
-
-    // Parse directives
-    for (const [name, value] of Object.entries(attributes)) {
-      // Check if this looks like a directive but is invalid
-      // Skip validation for island loading strategies
-      if (name.includes(':') && !isValidDirective(name) && !isValidIslandStrategy(name)) {
-        this.addError(`Invalid directive: ${name}`);
-      }
-
-      const directiveType = getDirectiveType(name);
-      if (directiveType) {
-        element.directive = this.parseDirective(directiveType, name, value);
-      }
-    }
-
-    // Check for islands
-    if (tagName === 'island') {
-      element.island = this.parseIsland(attributes);
-    }
-
-    return element;
-  }
-
+  /**
+   * Create directive node
+   */
   private parseDirective(type: DirectiveNode['type'], name: string, value: string): DirectiveNode {
     return {
       type,
@@ -433,87 +270,54 @@ export class WorkingHTMLParser {
     };
   }
 
-  private parseIsland(attributes: Record<string, string>): IslandNode {
-    const src = attributes.src;
-    if (!src) {
-      this.addError('Island missing required "src" attribute');
-      return { src: '', strategy: 'load' };
+  /**
+   * Get position info from node (if available)
+   */
+  private getPosition(node: Node): { line: number; column: number } {
+    // htmlparser2 provides startIndex, we can calculate line/column from source
+    if ('startIndex' in node && typeof node.startIndex === 'number') {
+      const { line, column } = this.calculateLineColumn(node.startIndex);
+      return { line, column };
     }
+    return { line: 1, column: 1 };
+  }
 
-    // Determine loading strategy
-    let strategy: IslandNode['strategy'] = 'load';
-    for (const [attr] of Object.entries(attributes)) {
-      if (isValidIslandStrategy(attr)) {
-        strategy = ISLAND_STRATEGIES[attr as keyof typeof ISLAND_STRATEGIES];
-        break;
+  /**
+   * Calculate line and column from string index
+   */
+  private calculateLineColumn(index: number): { line: number; column: number } {
+    let line = 1;
+    let column = 1;
+
+    for (let i = 0; i < index && i < this.source.length; i++) {
+      if (this.source[i] === '\n') {
+        line++;
+        column = 1;
+      } else {
+        column++;
       }
     }
 
-    return { src, strategy };
+    return { line, column };
   }
 
-  private advance(count = 1): void {
-    for (let i = 0; i < count; i++) {
-      if (this.pos < this.source.length) {
-        if (this.source[this.pos] === '\n') {
-          this.line++;
-          this.column = 1;
-        } else {
-          this.column++;
-        }
-        this.pos++;
-      }
-    }
-  }
-
-  private skipWhitespace(): void {
-    while (this.pos < this.source.length) {
-      const char = this.source[this.pos];
-      if (!char || !/\s/.test(char)) break;
-      this.advance();
-    }
-  }
-
-  private skipToNext(char: string): void {
-    while (this.pos < this.source.length && this.source[this.pos] !== char) {
-      this.advance();
-    }
-  }
-
-  private isSelfClosingElement(tagName: string): boolean {
-    const selfClosingTags = [
-      'area',
-      'base',
-      'br',
-      'col',
-      'embed',
-      'hr',
-      'img',
-      'input',
-      'link',
-      'meta',
-      'param',
-      'source',
-      'track',
-      'wbr',
-    ];
-    return selfClosingTags.includes(tagName.toLowerCase());
-  }
-
-  private addError(message: string): void {
+  /**
+   * Add error to error list
+   */
+  private addError(message: string, line: number, column: number): void {
     this.errors.push({
       message,
-      line: this.line,
-      column: this.column,
+      line,
+      column,
       filename: this.filename,
     });
   }
 }
 
 /**
- * Parse HTML source into AST
+ * Parse HTML source into AST using hybrid approach
  */
 export function parseHTML(source: string, options: HTMLParseOptions = {}): HTMLParseResult {
-  const parser = new WorkingHTMLParser(source, options);
+  const parser = new HybridHTMLParser(source, options);
   return parser.parse();
 }

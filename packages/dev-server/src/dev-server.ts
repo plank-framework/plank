@@ -281,27 +281,20 @@ export class PlankDevServer extends EventEmitter implements DevServer {
           this.emit('route:update', relativePath);
         }
 
-        // Send HMR update
+        // Send HMR update - full reload for .plk template files
         if (this.config.hmr && this.server) {
           const update: HMRUpdate = {
-            type: 'js-update',
+            type: 'full-reload',
             path: relativePath,
             timestamp: Date.now(),
           };
 
           this.emit('hmr:update', update);
 
-          // Send to Vite HMR
+          // Trigger full page reload for template changes
           this.server.ws.send({
-            type: 'update',
-            updates: [
-              {
-                type: 'js-update',
-                path: relativePath,
-                timestamp: Date.now(),
-                acceptedPath: relativePath,
-              },
-            ],
+            type: 'full-reload',
+            path: '*',
           });
         }
       }

@@ -114,26 +114,18 @@ export function plankPlugin(options: PlankPluginOptions = {}): Plugin {
     handleHotUpdate(ctx: any) {
       // Handle HMR for .plk files
       if (hmr && extensions.some((ext) => ctx.file.endsWith(ext))) {
-        const modules = ctx.modules;
-
         // Invalidate processed files cache
         processedFiles.delete(ctx.file);
         fileHashes.delete(ctx.file);
 
-        // Send HMR update
+        // .plk files are server-rendered templates - trigger full page reload
         ctx.server.ws.send({
-          type: 'update',
-          updates: [
-            {
-              type: 'js-update',
-              path: ctx.file,
-              timestamp: Date.now(),
-              acceptedPath: ctx.file,
-            },
-          ],
+          type: 'full-reload',
+          path: '*',
         });
 
-        return modules;
+        // Return empty array to prevent default HMR
+        return [];
       }
 
       return undefined;

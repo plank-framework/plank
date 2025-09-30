@@ -475,8 +475,7 @@ function generateImportStatements(
 function generateMountFunction(content: string, _scripts: unknown[]): string {
   // IMPORTANT: Extract directives BEFORE stripping them from HTML!
   const htmlWithDirectives = content
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
 
   const forLoops = extractForLoops(htmlWithDirectives);
 
@@ -488,7 +487,6 @@ function generateMountFunction(content: string, _scripts: unknown[]): string {
 
   const directives = extractDirectivesFromHTML(htmlWithoutForLoops);
   const textBindings = extractTextInterpolations(htmlWithDirectives);
-
 
   const lines: string[] = [];
 
@@ -767,15 +765,43 @@ function generateLoopItemBindingLines(
 }
 
 /**
+ * Extract directive value with proper brace matching
+ */
+function extractDirectiveValue(attrs: string, directiveName: string): string | null {
+  const pattern = new RegExp(`${directiveName}=\\{`);
+  const match = pattern.exec(attrs);
+  if (!match) return null;
+
+  const startIdx = match.index + match[0].length;
+  let braceCount = 1;
+  let endIdx = startIdx;
+
+  while (endIdx < attrs.length && braceCount > 0) {
+    if (attrs[endIdx] === '{') braceCount++;
+    if (attrs[endIdx] === '}') braceCount--;
+    endIdx++;
+  }
+
+  if (braceCount === 0) {
+    return attrs.substring(startIdx, endIdx - 1);
+  }
+  return null;
+}
+
+/**
  * Parse directive matches from element attributes
  */
 function parseDirectiveMatches(attrs: string) {
+  const onMatch = attrs.match(/on:(\w+)=\{/);
+  const bindMatch = attrs.match(/bind:(\w+)=\{/);
+  const classMatch = attrs.match(/class:(\w+)=\{/);
+
   return {
-    on: attrs.match(/on:(\w+)=\{([^}]+)\}/),
-    bind: attrs.match(/bind:(\w+)=\{([^}]+)\}/),
-    class: attrs.match(/class:(\w+)=\{([^}]+)\}/),
-    xIf: attrs.match(/x:if=\{([^}]+)\}/),
-    xFor: attrs.match(/x:for=\{([^}]+)\}/),
+    on: onMatch ? [onMatch[0], onMatch[1], extractDirectiveValue(attrs, `on:${onMatch[1]}`)] : null,
+    bind: bindMatch ? [bindMatch[0], bindMatch[1], extractDirectiveValue(attrs, `bind:${bindMatch[1]}`)] : null,
+    class: classMatch ? [classMatch[0], classMatch[1], extractDirectiveValue(attrs, `class:${classMatch[1]}`)] : null,
+    xIf: attrs.includes('x:if=') ? [null, extractDirectiveValue(attrs, 'x:if')] : null,
+    xFor: attrs.includes('x:for=') ? [null, extractDirectiveValue(attrs, 'x:for')] : null,
   };
 }
 
@@ -951,6 +977,70 @@ function extractForLoops(html: string): Array<{
 }
 
 /**
+ * Find the end of an opening tag, handling > inside {}
+ */
+function findTagEnd(html: string, tagStart: number, tagNameLength: number): number {
+  let tagEnd = tagStart + tagNameLength;
+  let braceDepth = 0;
+
+  while (tagEnd < html.length) {
+    const char = html[tagEnd];
+    if (char === '{') braceDepth++;
+    else if (char === '}') braceDepth--;
+    else if (char === '>' && braceDepth === 0) break;
+    tagEnd++;
+  }
+
+  return tagEnd;
+}
+
+/**
+ * Parse a single element and extract directives
+ */
+function parseElementDirectives(
+  html: string,
+  tagStart: number,
+  directives: Array<{
+    type: string;
+    selector: string;
+    attribute: string;
+    value: string;
+    isCheckbox?: boolean;
+    index: number;
+  }>,
+  tagIndexMap: Map<string, number>
+): number {
+  // Skip closing tags and comments
+  if (html[tagStart + 1] === '/' || html[tagStart + 1] === '!') {
+    return tagStart + 1;
+  }
+
+  // Find tag name
+  const tagNameMatch = html.substring(tagStart).match(/^<(\w+)/);
+  if (!tagNameMatch?.[1]) {
+    return tagStart + 1;
+  }
+
+  const tag = tagNameMatch[1];
+  const tagEnd = findTagEnd(html, tagStart, tagNameMatch[0].length);
+  const attrs = html.substring(tagStart + tag.length + 1, tagEnd).trim();
+
+  if (attrs) {
+    const matches = parseDirectiveMatches(attrs);
+    const hasDirectives =
+      matches.on || matches.bind || matches.class || matches.xIf || matches.xFor;
+
+    if (hasDirectives) {
+      const currentIndex = tagIndexMap.get(tag) ?? 0;
+      addDirectiveIfMatched(directives, matches, tag, attrs, currentIndex);
+      tagIndexMap.set(tag, currentIndex + 1);
+    }
+  }
+
+  return tagEnd + 1;
+}
+
+/**
  * Extract directives from HTML content using index-based tracking
  */
 function extractDirectivesFromHTML(html: string): Array<{
@@ -970,32 +1060,17 @@ function extractDirectivesFromHTML(html: string): Array<{
     index: number;
   }> = [];
 
-  const elementRegex = /<(\w+)([^>]*?)>/g;
-  let match: RegExpExecArray | null = elementRegex.exec(html);
-
   // Track index per tag type (e.g., input[0], button[0], button[1], etc.)
   const tagIndexMap = new Map<string, number>();
 
-  while (match !== null) {
-    const tag = match[1];
-    const attrs = match[2];
+  // Manually parse elements to handle > inside attribute values
+  let pos = 0;
 
-    if (!tag || !attrs) {
-      match = elementRegex.exec(html);
-      continue;
-    }
+  while (pos < html.length) {
+    const tagStart = html.indexOf('<', pos);
+    if (tagStart === -1) break;
 
-    const matches = parseDirectiveMatches(attrs);
-    const hasDirectives =
-      matches.on || matches.bind || matches.class || matches.xIf || matches.xFor;
-
-    if (hasDirectives) {
-      const currentIndex = tagIndexMap.get(tag) ?? 0;
-      addDirectiveIfMatched(directives, matches, tag, attrs, currentIndex);
-      tagIndexMap.set(tag, currentIndex + 1);
-    }
-
-    match = elementRegex.exec(html);
+    pos = parseElementDirectives(html, tagStart, directives, tagIndexMap);
   }
 
   return directives;
@@ -1157,12 +1232,11 @@ function extractHTMLFromPlk(content: string): string {
   // Remove script tags and their content
   let html = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
 
-  // Remove style tags and their content
-  html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  // Keep style tags - they will be injected into the DOM with the template
+  // No need to remove them, the browser will apply them when innerHTML is set
 
-  // Remove directive attributes - match from directive to next space or >
-  // This handles complex expressions like {todos().length === 0}
-  html = html.replace(/\s+(on|bind|class|attr|x|use|client):[\w-]+=[^\s>]+/gi, '');
+  // Remove directive attributes using proper brace matching
+  html = stripDirectives(html);
 
   // Clean up any remaining script-related content and return the HTML
   return html.trim();

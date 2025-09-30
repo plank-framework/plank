@@ -25,13 +25,8 @@ export class CSRFManager {
     this.config = { ...DEFAULT_CONFIG, ...config };
 
     // Warn if using default secret in production
-    if (
-      this.config.secret === DEFAULT_CONFIG.secret &&
-      process.env.NODE_ENV === 'production'
-    ) {
-      console.warn(
-        '⚠️  Using default CSRF secret! Set PLANK_CSRF_SECRET environment variable.'
-      );
+    if (this.config.secret === DEFAULT_CONFIG.secret && process.env.NODE_ENV === 'production') {
+      console.warn('⚠️  Using default CSRF secret! Set PLANK_CSRF_SECRET environment variable.');
     }
   }
 
@@ -88,10 +83,7 @@ export class CSRFManager {
    */
   private sign(payload: CSRFTokenPayload): string {
     const data = JSON.stringify(payload);
-    return createHash('sha256')
-      .update(data)
-      .update(this.config.secret)
-      .digest('base64url');
+    return createHash('sha256').update(data).update(this.config.secret).digest('base64url');
   }
 
   /**

@@ -16,10 +16,22 @@
   ],
   "scripts": {
     "build": "tsc",
-    "lint": "biome lint .",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
+    "lint": "biome lint .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format .",
+    "format:fix": "biome check --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
     "test": "vitest",
-    "test:coverage": "vitest --coverage"
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:ui": "vitest run --coverage --ui"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "plank",
@@ -34,6 +46,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "happy-dom": "^16.0.0",
     "typescript": "^5.3.3",
     "vitest": "^3.0.0"
   }

@@ -196,9 +196,7 @@ describe('CSRFManager', () => {
 
       createCSRFManager(); // Using default secret
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Using default CSRF secret')
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Using default CSRF secret'));
 
       process.env.NODE_ENV = originalEnv;
       consoleSpy.mockRestore();

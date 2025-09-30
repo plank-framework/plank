@@ -282,6 +282,7 @@ describe('preview command', () => {
     // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
     vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
       requestHandler = handler;
+      // biome-ignore lint/suspicious/noExplicitAny: <mockServer type compatibility>
       return mockServer as any;
     });
 
@@ -319,6 +320,7 @@ describe('preview command', () => {
     // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
     vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
       requestHandler = handler;
+      // biome-ignore lint/suspicious/noExplicitAny: <mockServer type compatibility>
       return mockServer as any;
     });
 
@@ -354,6 +356,7 @@ describe('preview command', () => {
     // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
     vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
       requestHandler = handler;
+      // biome-ignore lint/suspicious/noExplicitAny: <mockServer type compatibility>
       return mockServer as any;
     });
 
@@ -388,6 +391,7 @@ describe('preview command', () => {
     // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
     vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
       requestHandler = handler;
+      // biome-ignore lint/suspicious/noExplicitAny: <mockServer type compatibility>
       return mockServer as any;
     });
 
@@ -423,6 +427,7 @@ describe('preview command', () => {
     // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
     vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
       requestHandler = handler;
+      // biome-ignore lint/suspicious/noExplicitAny: <mockServer type compatibility>
       return mockServer as any;
     });
 

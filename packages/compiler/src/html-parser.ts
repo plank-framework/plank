@@ -124,6 +124,23 @@ export class HybridHTMLParser {
       return null as unknown as TemplateNode; // Don't include script in AST
     }
 
+    // Handle style nodes (htmlparser2 also treats them as a special type)
+    if (node.type === 'style') {
+      const element = node as Element;
+      // Keep style tags in the AST for rendering
+      const content = element.children
+        .filter((child): child is Text => child.type === 'text')
+        .map((child) => child.data)
+        .join('');
+
+      return {
+        type: 'element',
+        tag: 'style',
+        attributes: { ...element.attribs },
+        children: [{ type: 'text', text: content }],
+      };
+    }
+
     // Handle element nodes
     if (node.type === 'tag') {
       const element = node as Element;

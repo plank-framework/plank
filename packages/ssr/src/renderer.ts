@@ -397,10 +397,18 @@ export class SSRRenderer {
 
     writer.write('>');
 
+    // Special handling for style and script tags - don't escape content
+    const isRawContentTag = node.tag === 'style' || node.tag === 'script';
+
     // Render children (checking for slots)
     if (node.children) {
       for (const child of node.children) {
-        this.renderNodeWithSlots(child, slots, context, writer);
+        if (isRawContentTag && child.type === 'text') {
+          // Render raw content without escaping for style/script tags
+          writer.write(child.text || '');
+        } else {
+          this.renderNodeWithSlots(child, slots, context, writer);
+        }
       }
     }
 
@@ -542,8 +550,17 @@ export class SSRRenderer {
     // Self-closing or with children
     if (node.children && node.children.length > 0) {
       writer.write('>');
+
+      // Special handling for style and script tags - don't escape content
+      const isRawContentTag = node.tag === 'style' || node.tag === 'script';
+
       for (const child of node.children) {
-        this.renderNode(child, context, writer);
+        if (isRawContentTag && child.type === 'text') {
+          // Render raw content without escaping for style/script tags
+          writer.write(child.text || '');
+        } else {
+          this.renderNode(child, context, writer);
+        }
       }
       writer.write(`</${node.tag}>`);
     } else {

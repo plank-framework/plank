@@ -58,8 +58,11 @@ export async function loadIsland<T = Record<string, unknown>>(
   }
 
   try {
-    // Dynamic import of the island component
-    const module = await import(src);
+    // Resolve the island path relative to the current page
+    const resolvedSrc = resolveIslandPath(src);
+
+    // Try to load the compiled island component
+    const module = await import(resolvedSrc);
     const component = module.default || module;
 
     if (typeof component.mount !== 'function') {
@@ -70,8 +73,53 @@ export async function loadIsland<T = Record<string, unknown>>(
     return component as IslandComponent<T>;
   } catch (error) {
     console.error(`Failed to load island component ${src}:`, error);
-    throw error;
+
+    // Return fallback component
+    const fallbackComponent: IslandComponent<T> = {
+      mount: (element: Element) => {
+        console.log(`Island ${src} loaded with fallback component`);
+        element.innerHTML = `<div style="padding: 1rem; border: 2px dashed #ccc; text-align: center; color: #666;">
+          <p>Island: ${src}</p>
+          <p><em>Component compilation failed</em></p>
+          <p><small>Error: ${error instanceof Error ? error.message : 'Unknown error'}</small></p>
+        </div>`;
+
+        return effect(() => {
+          console.log(`Fallback island ${src} effect running`);
+        });
+      },
+      unmount: () => {}
+    };
+
+    islandRegistry[src] = fallbackComponent as IslandComponent<Record<string, unknown>>;
+    return fallbackComponent;
   }
+}
+
+/**
+ * Resolve island path relative to the current page
+ */
+function resolveIslandPath(src: string): string {
+  // If it's already an absolute URL, return as is
+  if (src.startsWith('http://') || src.startsWith('https://')) {
+    return src;
+  }
+
+  // If it's already an absolute path, return as is
+  if (src.startsWith('/')) {
+    return src;
+  }
+
+  // For relative paths, resolve relative to the app directory
+  // The current page is at / (root), so islands should be at /app/islands/
+
+  // Handle relative paths like "./islands/Counter.plk"
+  if (src.startsWith('./')) {
+    return `/app/${src.substring(2)}`;
+  }
+
+  // Handle relative paths like "islands/Counter.plk"
+  return `/app/${src}`;
 }
 
 /**

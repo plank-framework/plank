@@ -2,18 +2,11 @@
  * @fileoverview Vite plugin for Plank .plk file processing
  */
 
-// Note: These imports will be available at runtime
-// import type { Plugin } from 'vite';
-// import { compile } from '@plank/compiler';
-
 import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import type { Plugin } from 'vite';
 import type { PlankPluginOptions } from './types.js';
-
-// Temporary type definitions until dependencies are installed
-// biome-ignore lint/suspicious/noExplicitAny: Temporary types until dependencies are installed
-type Plugin = any;
 
 /**
  * Create Vite plugin for Plank
@@ -78,12 +71,27 @@ export function plankPlugin(options: PlankPluginOptions = {}): Plugin {
           transform,
         });
 
+        // Check if this is an island component (contains /islands/ in path)
+        const isIsland = id.includes('/islands/') || id.includes('\\islands\\');
+
+        let finalCode: string;
+        if (isIsland) {
+          // Generate island component module with original content for HTML extraction
+          finalCode = generateIslandModule(result, content, {
+            sourcemap,
+            transform,
+          });
+        } else {
+          // Use regular HTML code for non-island files
+          finalCode = result.code;
+        }
+
         // Store processed content and hash
-        processedFiles.set(id, result.code);
+        processedFiles.set(id, finalCode);
         fileHashes.set(id, hash);
 
         return {
-          code: result.code,
+          code: finalCode,
           map: result.map,
           meta: {
             plank: {
@@ -96,11 +104,8 @@ export function plankPlugin(options: PlankPluginOptions = {}): Plugin {
           },
         };
       } catch (error) {
-        this.error(`Failed to process .plk file: ${id}`, {
-          id,
-          plugin: 'plank',
-          error: error as Error,
-        });
+        const err = error as Error;
+        this.error(`Failed to process .plk file: ${id}\n${err.message}\n${err.stack || ''}`);
         return null;
       }
     },
@@ -172,7 +177,7 @@ async function processPlkFile(
     });
 
     // Generate JavaScript code
-    const code = generateJavaScriptCode(result, filePath, options);
+    const code = generateJavaScriptCode(result, filePath, content, options);
 
     return {
       code,
@@ -201,6 +206,81 @@ async function processPlkFile(
 }
 
 /**
+ * Generate regular module exports section
+ */
+function generateModuleExports(
+  code: string,
+  islands: unknown[],
+  actions: unknown[],
+  chunks: unknown[]
+): string {
+  let moduleCode = `// Template\nexport const template = ${JSON.stringify(code)};\n\n`;
+
+  if (islands.length > 0) {
+    moduleCode += `// Islands\nexport const islands = ${JSON.stringify(islands)};\n\n`;
+  }
+
+  if (actions.length > 0) {
+    moduleCode += `// Actions\nexport const actions = ${JSON.stringify(actions)};\n\n`;
+  }
+
+  if (chunks.length > 0) {
+    moduleCode += `// Chunks\nexport const chunks = ${JSON.stringify(chunks)};\n\n`;
+  }
+
+  // Add default export
+  moduleCode += `// Default export\nexport default {\n  template,\n`;
+  if (islands.length > 0) moduleCode += `  islands,\n`;
+  if (actions.length > 0) moduleCode += `  actions,\n`;
+  if (chunks.length > 0) moduleCode += `  chunks,\n`;
+  moduleCode += `};\n`;
+
+  return moduleCode;
+}
+
+/**
+ * Generate regular module code with scripts and dependencies
+ */
+function generateRegularModule(
+  result: {
+    code: string;
+    scripts: unknown[];
+    dependencies: unknown[];
+    islands: unknown[];
+    actions: unknown[];
+    chunks: unknown[];
+  },
+  filePath: string,
+  options: { sourcemap: boolean }
+): string {
+  const { code, scripts, dependencies, islands, actions, chunks } = result;
+  let moduleCode = '';
+
+  if (options.sourcemap) {
+    moduleCode += `//# sourceMappingURL=${filePath}.map\n\n`;
+  }
+
+  if (dependencies.length > 0) {
+    moduleCode += `// Dependencies\n`;
+    for (const dep of dependencies) {
+      moduleCode += `import ${JSON.stringify(dep)};\n`;
+    }
+    moduleCode += '\n';
+  }
+
+  if (scripts.length > 0) {
+    moduleCode += `// Scripts\n`;
+    for (const script of scripts) {
+      moduleCode += `${script}\n\n`;
+    }
+  }
+
+  moduleCode += generateModuleExports(code, islands, actions, chunks);
+
+  return moduleCode;
+}
+
+/**
  * Generate JavaScript code from compilation result
  */
 function generateJavaScriptCode(
@@ -214,79 +294,126 @@ function generateJavaScriptCode(
     errors: unknown[];
   },
   filePath: string,
-  _options: {
+  originalContent: string,
+  options: {
     sourcemap: boolean;
     transform: PlankPluginOptions['transform'];
   }
 ): string {
-  const { code, scripts, dependencies, islands, actions, chunks, errors } = result;
-
   // If there are compilation errors, return error code
-  if (errors.length > 0) {
+  if (result.errors.length > 0) {
     return generateErrorCode(
-      new Error(`Compilation errors: ${errors.map((e) => String(e)).join(', ')}`),
+      new Error(`Compilation errors: ${result.errors.map((e) => String(e)).join(', ')}`),
       filePath
     );
   }
 
-  // Generate module code
-  let moduleCode = '';
+  // Check if this is an island component (contains /islands/ in path)
+  const isIsland = filePath.includes('/islands/') || filePath.includes('\\islands\\');
 
-  // Add imports for dependencies
-  if (dependencies.length > 0) {
-    moduleCode += `// Dependencies\n`;
-    for (const dep of dependencies) {
-      moduleCode += `import ${JSON.stringify(dep)};\n`;
+  if (isIsland) {
+    return generateIslandModule(result, originalContent, options);
+  }
+
+  return generateRegularModule(result, filePath, options);
+}
+
+/**
+ * Generate dependencies section for island module
+ */
+function generateDependenciesSection(
+  dependencies: unknown[],
+  options: { sourcemap: boolean }
+): string {
+  let code = '';
+
+  // Add sourcemap reference if enabled
+  if (options.sourcemap) {
+    code += '//# sourceMappingURL=island.map\n\n';
+  }
+
+  if (dependencies.length === 0) return code;
+
+  code += '// Dependencies\n';
+  for (const dep of dependencies) {
+    code += `import ${JSON.stringify(dep)};\n`;
+  }
+  return `${code}\n`;
+}
+
+/**
+ * Generate scripts section for island module
+ */
+function generateScriptsSection(scripts: unknown[]): string {
+  if (scripts.length === 0) return '';
+
+  let code = '// Island component logic\n';
+  for (const script of scripts) {
+    const scriptContent = extractScriptContent(script);
+    if (scriptContent) {
+      code += `${scriptContent}\n\n`;
     }
-    moduleCode += '\n';
   }
+  return code;
+}
 
-  // Add script content
-  if (scripts.length > 0) {
-    moduleCode += `// Scripts\n`;
-    for (const script of scripts) {
-      moduleCode += `${script}\n\n`;
-    }
+/**
+ * Extract content from a script object or string
+ */
+function extractScriptContent(script: unknown): string | null {
+  if (typeof script === 'string') return script;
+  if (typeof script === 'object' && script !== null) {
+    const scriptObj = script as { content?: string };
+    return scriptObj.content || null;
   }
+  return null;
+}
 
-  // Add template code
-  moduleCode += `// Template\n`;
-  moduleCode += `export const template = ${JSON.stringify(code)};\n\n`;
+/**
+ * Generate island component module
+ */
+function generateIslandModule(
+  result: {
+    code: string;
+    scripts: unknown[];
+    dependencies: unknown[];
+    islands: unknown[];
+    actions: unknown[];
+    chunks: unknown[];
+    errors: unknown[];
+  },
+  originalContent: string,
+  options: {
+    sourcemap: boolean;
+    transform: PlankPluginOptions['transform'];
+  }
+): string {
+  const { scripts, dependencies } = result;
+  const htmlContent = extractHTMLFromPlk(originalContent);
 
-  // Add islands
-  if (islands.length > 0) {
-    moduleCode += `// Islands\n`;
-    moduleCode += `export const islands = ${JSON.stringify(islands)};\n\n`;
-  }
+  const dependenciesCode = generateDependenciesSection(dependencies, options);
+  const scriptsCode = generateScriptsSection(scripts);
 
-  // Add actions
-  if (actions.length > 0) {
-    moduleCode += `// Actions\n`;
-    moduleCode += `export const actions = ${JSON.stringify(actions)};\n\n`;
-  }
+  return `${dependenciesCode}${scriptsCode}// Island template
+const template = ${JSON.stringify(htmlContent)};
 
-  // Add chunks
-  if (chunks.length > 0) {
-    moduleCode += `// Chunks\n`;
-    moduleCode += `export const chunks = ${JSON.stringify(chunks)};\n\n`;
-  }
+// Default export
+export default {
+  mount,
+  template,
+};
+`;
+}
 
-  // Add default export
-  moduleCode += `// Default export\n`;
-  moduleCode += `export default {\n`;
-  moduleCode += `  template,\n`;
-  if (islands.length > 0) {
-    moduleCode += `  islands,\n`;
-  }
-  if (actions.length > 0) {
-    moduleCode += `  actions,\n`;
-  }
-  if (chunks.length > 0) {
-    moduleCode += `  chunks,\n`;
-  }
-  moduleCode += `};\n`;
+/**
+ * Extract HTML content from a .plk file by removing script tags
+ */
+function extractHTMLFromPlk(content: string): string {
+  // Remove script tags and their content
+  const withoutScripts = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
 
-  return moduleCode;
+  // Clean up any remaining script-related content and return the HTML
+  return withoutScripts.trim();
 }
 
 /**

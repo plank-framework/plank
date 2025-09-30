@@ -459,9 +459,7 @@ function generateImportStatements(
   }
 
   if (runtimeDomImports.size > 0) {
-    lines.push(
-      `import { ${Array.from(runtimeDomImports).join(', ')} } from '@plank/runtime-dom';`
-    );
+    lines.push(`import { ${Array.from(runtimeDomImports).join(', ')} } from '@plank/runtime-dom';`);
   }
 
   if (runtimeCoreImports.size > 0 || runtimeDomImports.size > 0) {
@@ -480,16 +478,31 @@ function generateMountFunction(content: string, _scripts: unknown[]): string {
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
 
-  const directives = extractDirectivesFromHTML(htmlWithDirectives);
+  const forLoops = extractForLoops(htmlWithDirectives);
+
+  // Strip x:for elements before extracting other directives
+  // to avoid binding their internal directives in the main mount function
+  let htmlWithoutForLoops = htmlWithDirectives;
+  const forRegex = /<(\w+)([^>]*x:for=[^>]*)>([\s\S]*?)<\/\1>/gi;
+  htmlWithoutForLoops = htmlWithoutForLoops.replace(forRegex, '');
+
+  const directives = extractDirectivesFromHTML(htmlWithoutForLoops);
   const textBindings = extractTextInterpolations(htmlWithDirectives);
+
 
   const lines: string[] = [];
 
   // Determine what imports we need
-  const needsBindings = directives.length > 0 || textBindings.length > 0;
+  const needsBindings = directives.length > 0 || textBindings.length > 0 || forLoops.length > 0;
 
   if (needsBindings) {
     const { runtimeDom, runtimeCore } = getRequiredImports(directives, textBindings);
+
+    // Add effect for x:for loops
+    if (forLoops.length > 0) {
+      runtimeCore.add('effect');
+    }
+
     const importLines = generateImportStatements(runtimeCore, runtimeDom);
     lines.push(...importLines);
   }
@@ -511,6 +524,12 @@ function generateMountFunction(content: string, _scripts: unknown[]): string {
     lines.push(textBindingCode);
   }
 
+  // Generate x:for loop bindings
+  const forLoopCode = generateForLoopBindings(forLoops);
+  if (forLoopCode) {
+    lines.push(forLoopCode);
+  }
+
   lines.push('');
   lines.push('  return {');
   lines.push('    unmount: () => {');
@@ -520,6 +539,231 @@ function generateMountFunction(content: string, _scripts: unknown[]): string {
   lines.push('}');
 
   return lines.join('\n');
+}
+
+/**
+ * Generate x:for loop rendering code
+ */
+function generateForLoopBindings(
+  loops: Array<{
+    itemVar: string;
+    itemsVar: string;
+    keyExpr?: string;
+    template: string;
+    originalTemplate: string;
+    containerTag: string;
+    index: number;
+  }>
+): string {
+  if (loops.length === 0) return '';
+
+  const lines: string[] = [];
+  lines.push('');
+  lines.push('  // x:for list rendering');
+
+  for (const loop of loops) {
+    const { itemVar, itemsVar, keyExpr, template, originalTemplate, containerTag, index } = loop;
+
+    lines.push(`  {`);
+    lines.push(`    // Find parent container (x:for element's parent)`);
+    lines.push(`    const allContainers = element.querySelectorAll('${containerTag}');`);
+    lines.push(`    const loopContainer = allContainers[${index}];`);
+    lines.push(`    if (loopContainer && loopContainer.parentElement) {`);
+    lines.push(`      const container = loopContainer.parentElement;`);
+    lines.push(`      const itemTemplate = ${JSON.stringify(template)};`);
+    lines.push(`      const renderedItems = new Map(); // Track rendered items by key`);
+    lines.push(`      const placeholder = loopContainer; // Original element as placeholder`);
+    lines.push(`      `);
+    lines.push(`      effects.push(effect(() => {`);
+    lines.push(`        const items = ${itemsVar};`);
+    lines.push(`        if (!Array.isArray(items)) return;`);
+    lines.push(`        `);
+    lines.push(`        // Create map of new items by key`);
+    lines.push(`        const newKeys = new Set();`);
+    lines.push(`        const itemElements = [];`);
+    lines.push(`        `);
+    lines.push(`        for (const ${itemVar} of items) {`);
+
+    if (keyExpr) {
+      lines.push(`          const key = String(${keyExpr});`);
+      lines.push(`          newKeys.add(key);`);
+      lines.push(`          `);
+      lines.push(`          // Reuse existing element if key matches, otherwise create new`);
+      lines.push(`          let itemEl = renderedItems.get(key);`);
+      lines.push(`          let isNewElement = false;`);
+      lines.push(`          if (!itemEl) {`);
+      lines.push(`            // Create new element from template`);
+      lines.push(`            const temp = document.createElement('div');`);
+      lines.push(`            temp.innerHTML = itemTemplate;`);
+      lines.push(`            itemEl = temp.firstElementChild;`);
+      lines.push(`            renderedItems.set(key, itemEl);`);
+      lines.push(`            isNewElement = true;`);
+      lines.push(`          }`);
+      lines.push(`          `);
+      lines.push(
+        `          // Always update bindings (text and listeners) with current loop values`
+      );
+
+      const itemBindings = generateLoopItemBindingLines(loop, originalTemplate);
+      for (const binding of itemBindings) {
+        lines.push(`          ${binding}`);
+      }
+
+      lines.push(`          itemElements.push(itemEl);`);
+    } else {
+      // No keying - just recreate all elements
+      lines.push(`          const temp = document.createElement('div');`);
+      lines.push(`          temp.innerHTML = itemTemplate;`);
+      lines.push(`          const itemEl = temp.firstElementChild;`);
+      lines.push(`          `);
+      lines.push(`          // Bind directives and interpolations`);
+
+      const itemBindings = generateLoopItemBindingLines(loop, originalTemplate);
+      for (const binding of itemBindings) {
+        lines.push(`          ${binding}`);
+      }
+
+      lines.push(`          itemElements.push(itemEl);`);
+    }
+
+    lines.push(`        }`);
+    lines.push(`        `);
+
+    if (keyExpr) {
+      lines.push(`        // Remove items that are no longer in the list`);
+      lines.push(`        for (const [key, el] of renderedItems.entries()) {`);
+      lines.push(`          if (!newKeys.has(key)) {`);
+      lines.push(`            el?.remove(); // Remove from DOM`);
+      lines.push(`            renderedItems.delete(key); // Remove from Map`);
+      lines.push(`          }`);
+      lines.push(`        }`);
+      lines.push(`        `);
+    }
+
+    lines.push(`        // Update DOM - replace placeholder or update container`);
+    lines.push(`        if (placeholder.parentElement) {`);
+    lines.push(`          // Remove all existing rendered items from DOM first`);
+    lines.push(`          let next = placeholder.nextSibling;`);
+    lines.push(`          while (next) {`);
+    lines.push(`            const current = next;`);
+    lines.push(`            next = next.nextSibling;`);
+    lines.push(`            // Check if this is one of our rendered items`);
+    lines.push(`            if (current.nodeType === 1 && current !== placeholder) {`);
+    lines.push(`              let isOurItem = false;`);
+    lines.push(`              for (const [, el] of renderedItems.entries()) {`);
+    lines.push(`                if (el === current) { isOurItem = true; break; }`);
+    lines.push(`              }`);
+    lines.push(`              if (isOurItem) current.remove();`);
+    lines.push(`            }`);
+    lines.push(`          }`);
+    lines.push(`          `);
+    lines.push(`          // Insert items in correct order after placeholder`);
+    lines.push(`          placeholder.style.display = 'none'; // Hide placeholder`);
+    lines.push(`          for (let i = itemElements.length - 1; i >= 0; i--) {`);
+    lines.push(`            const itemEl = itemElements[i];`);
+    lines.push(`            if (itemEl && placeholder.nextSibling) {`);
+    lines.push(`              container.insertBefore(itemEl, placeholder.nextSibling);`);
+    lines.push(`            } else if (itemEl) {`);
+    lines.push(`              container.appendChild(itemEl);`);
+    lines.push(`            }`);
+    lines.push(`          }`);
+    lines.push(`        }`);
+    lines.push(`      }));`);
+    lines.push(`    }`);
+    lines.push(`  }`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Extract text interpolation bindings from a loop template
+ */
+function extractLoopTextBindings(template: string, itemVar: string): string[] {
+  const lines: string[] = [];
+  const interpolationRegex = /<span[^>]*>([^<]*\{([^}]+)\}[^<]*)<\/span>/g;
+  let spanIndex = 0;
+  let interpMatch: RegExpExecArray | null = interpolationRegex.exec(template);
+
+  while (interpMatch !== null) {
+    const expr = interpMatch[2];
+
+    if (expr?.includes(itemVar)) {
+      lines.push(`const span${spanIndex} = itemEl?.querySelectorAll?.('span')?.[${spanIndex}];`);
+      lines.push(`if (span${spanIndex}) span${spanIndex}.textContent = String(${expr});`);
+      spanIndex++;
+    }
+
+    interpMatch = interpolationRegex.exec(template);
+  }
+
+  return lines;
+}
+
+/**
+ * Extract event handler bindings from a loop template
+ */
+function extractLoopEventBindings(template: string, itemVar: string): string[] {
+  const lines: string[] = [];
+  let searchPos = 0;
+  let buttonIndex = 0;
+
+  while (true) {
+    const onClickIdx = template.indexOf('on:click={', searchPos);
+    if (onClickIdx === -1) break;
+
+    // Find matching closing brace
+    const braceStart = onClickIdx + 9; // 'on:click={'.length - 1
+    let braceCount = 1;
+    let endIdx = braceStart + 1;
+
+    while (endIdx < template.length && braceCount > 0) {
+      if (template[endIdx] === '{') braceCount++;
+      if (template[endIdx] === '}') braceCount--;
+      endIdx++;
+    }
+
+    const handler = template.substring(braceStart + 1, endIdx - 1);
+
+    if (handler?.includes(itemVar)) {
+      lines.push(
+        `const btn${buttonIndex} = itemEl?.querySelectorAll?.('button')?.[${buttonIndex}];`
+      );
+      lines.push(`if (btn${buttonIndex}) {`);
+      // Remove old listener if it exists
+      lines.push(
+        `  if (btn${buttonIndex}._plkHandler) btn${buttonIndex}.removeEventListener('click', btn${buttonIndex}._plkHandler);`
+      );
+      // Create new handler and store reference
+      lines.push(`  const handler${buttonIndex} = ${handler};`);
+      lines.push(`  btn${buttonIndex}._plkHandler = handler${buttonIndex};`);
+      lines.push(`  btn${buttonIndex}.addEventListener('click', handler${buttonIndex});`);
+      lines.push(`}`);
+      buttonIndex++;
+    }
+
+    searchPos = endIdx;
+  }
+
+  return lines;
+}
+
+/**
+ * Generate bindings for a single loop item as separate lines
+ */
+function generateLoopItemBindingLines(
+  loop: { itemVar: string; template: string },
+  template: string
+): string[] {
+  const lines: string[] = [];
+
+  // Extract text interpolations
+  lines.push(...extractLoopTextBindings(template, loop.itemVar));
+
+  // Extract event handlers
+  lines.push(...extractLoopEventBindings(template, loop.itemVar));
+
+  return lines;
 }
 
 /**
@@ -560,7 +804,14 @@ function addDirectiveIfMatched(
 
   if (bind?.[1] && bind[2]) {
     const isCheckbox = attrs.includes('type="checkbox"');
-    directives.push({ type: 'bind', selector: tag, attribute: bind[1], value: bind[2], isCheckbox, index });
+    directives.push({
+      type: 'bind',
+      selector: tag,
+      attribute: bind[1],
+      value: bind[2],
+      isCheckbox,
+      index,
+    });
   }
 
   if (cls?.[1] && cls[2]) {
@@ -574,6 +825,129 @@ function addDirectiveIfMatched(
   if (xFor?.[1]) {
     directives.push({ type: 'x:for', selector: tag, attribute: 'for', value: xFor[1], index });
   }
+}
+
+/**
+ * Remove directive attributes from HTML (handles nested braces like arrow functions)
+ */
+function stripDirectives(html: string): string {
+  let result = html;
+
+  // Match directives one by one and remove them with proper brace matching
+  const directivePattern = /(on|bind|class|attr|x):[\w-]+=\{/g;
+  let match: RegExpExecArray | null = directivePattern.exec(result);
+
+  while (match !== null) {
+    const startIdx = match.index;
+    const braceStart = result.indexOf('{', startIdx);
+
+    if (braceStart !== -1) {
+      // Find matching closing brace
+      let braceCount = 1;
+      let endIdx = braceStart + 1;
+
+      while (endIdx < result.length && braceCount > 0) {
+        if (result[endIdx] === '{') braceCount++;
+        if (result[endIdx] === '}') braceCount--;
+        endIdx++;
+      }
+
+      // Remove the directive attribute including leading space
+      const beforeDirective = result.substring(0, startIdx).replace(/\s+$/, '');
+      const afterDirective = result.substring(endIdx);
+      result = beforeDirective + afterDirective;
+
+      // Reset regex since we modified the string
+      directivePattern.lastIndex = 0;
+    }
+
+    match = directivePattern.exec(result);
+  }
+
+  return result;
+}
+
+/**
+ * Extract x:for loop directives with their templates
+ */
+function extractForLoops(html: string): Array<{
+  itemVar: string;
+  itemsVar: string;
+  keyExpr?: string;
+  template: string;
+  originalTemplate: string;
+  containerTag: string;
+  index: number;
+}> {
+  const loops: Array<{
+    itemVar: string;
+    itemsVar: string;
+    keyExpr?: string;
+    template: string;
+    originalTemplate: string;
+    containerTag: string;
+    index: number;
+  }> = [];
+
+  // Match x:for elements with their full content
+  const forRegex = /<(\w+)([^>]*x:for=\{([^}]+)\}[^>]*)>([\s\S]*?)<\/\1>/gi;
+  let match: RegExpExecArray | null = forRegex.exec(html);
+  let loopIndex = 0;
+
+  while (match !== null) {
+    const tag = match[1];
+    const attrs = match[2];
+    const forExpr = match[3];
+    const innerHtml = match[4];
+
+    // Parse x:for="item of items()" syntax
+    const forMatch = forExpr?.trim().match(/^(\w+)\s+of\s+(.+)$/);
+    if (forMatch?.[1] && forMatch[2] && tag) {
+      const itemVar = forMatch[1];
+      const itemsVar = forMatch[2];
+
+      // Extract x:key if present
+      const keyMatch = attrs?.match(/x:key=\{([^}]+)\}/);
+      const keyExpr = keyMatch?.[1];
+
+      // Store ORIGINAL template with directives for binding extraction
+      const originalTemplate = `<${tag}${attrs}>${innerHtml || ''}</${tag}>`;
+
+      // Clean directive attributes from template for rendering
+      let cleanedAttrs = attrs || '';
+      cleanedAttrs = cleanedAttrs.replace(/\s+x:(for|key)=\{[^}]+\}/gi, '');
+      const cleanedInner = stripDirectives(innerHtml || '');
+      const cleanedTemplate = `<${tag}${cleanedAttrs}>${cleanedInner}</${tag}>`;
+
+      const loopData: {
+        itemVar: string;
+        itemsVar: string;
+        keyExpr?: string;
+        template: string;
+        originalTemplate: string;
+        containerTag: string;
+        index: number;
+      } = {
+        itemVar,
+        itemsVar,
+        template: cleanedTemplate,
+        originalTemplate,
+        containerTag: tag,
+        index: loopIndex++,
+      };
+
+      // Only add keyExpr if it exists (exactOptionalPropertyTypes)
+      if (keyExpr) {
+        loopData.keyExpr = keyExpr;
+      }
+
+      loops.push(loopData);
+    }
+
+    match = forRegex.exec(html);
+  }
+
+  return loops;
 }
 
 /**
@@ -598,7 +972,9 @@ function extractDirectivesFromHTML(html: string): Array<{
 
   const elementRegex = /<(\w+)([^>]*?)>/g;
   let match: RegExpExecArray | null = elementRegex.exec(html);
-  let directiveElementIndex = 0;
+
+  // Track index per tag type (e.g., input[0], button[0], button[1], etc.)
+  const tagIndexMap = new Map<string, number>();
 
   while (match !== null) {
     const tag = match[1];
@@ -610,11 +986,13 @@ function extractDirectivesFromHTML(html: string): Array<{
     }
 
     const matches = parseDirectiveMatches(attrs);
-    const hasDirectives = matches.on || matches.bind || matches.class || matches.xIf || matches.xFor;
+    const hasDirectives =
+      matches.on || matches.bind || matches.class || matches.xIf || matches.xFor;
 
     if (hasDirectives) {
-      addDirectiveIfMatched(directives, matches, tag, attrs, directiveElementIndex);
-      directiveElementIndex++;
+      const currentIndex = tagIndexMap.get(tag) ?? 0;
+      addDirectiveIfMatched(directives, matches, tag, attrs, currentIndex);
+      tagIndexMap.set(tag, currentIndex + 1);
     }
 
     match = elementRegex.exec(html);
@@ -625,6 +1003,7 @@ function extractDirectivesFromHTML(html: string): Array<{
 
 /**
  * Extract text interpolations from HTML
+ * NOTE: Skips interpolations inside x:for elements
  */
 function extractTextInterpolations(html: string): Array<{
   selector: string;
@@ -635,9 +1014,14 @@ function extractTextInterpolations(html: string): Array<{
     expression: string;
   }> = [];
 
+  // Remove x:for elements to avoid extracting loop variable interpolations like {todo.text}
+  let htmlWithoutLoops = html;
+  const forRegex = /<(\w+)([^>]*x:for=[^>]*)>([\s\S]*?)<\/\1>/gi;
+  htmlWithoutLoops = htmlWithoutLoops.replace(forRegex, '');
+
   // Match text content with interpolations like {clickCount()} or {username() || 'Stranger'}
   const textRegex = /<span[^>]*>([^<]*\{[^}]+\}[^<]*)<\/span>/g;
-  let match: RegExpExecArray | null = textRegex.exec(html);
+  let match: RegExpExecArray | null = textRegex.exec(htmlWithoutLoops);
   let spanIndex = 0;
 
   while (match !== null) {
@@ -661,7 +1045,7 @@ function extractTextInterpolations(html: string): Array<{
     }
 
     spanIndex++;
-    match = textRegex.exec(html);
+    match = textRegex.exec(htmlWithoutLoops);
   }
 
   return interpolations;

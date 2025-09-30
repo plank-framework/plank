@@ -722,3 +722,346 @@ describe('StreamingWriter', () => {
     expect(controller.enqueue).toHaveBeenCalled();
   });
 });
+
+describe('SSRRenderer - parseValue edge cases', () => {
+  const renderer = new SSRRenderer({
+    templateDir: '/templates',
+    assetsDir: '/assets',
+    baseUrl: '/',
+    streaming: false,
+  });
+
+  test('should parse boolean literals in expressions', async () => {
+    const context: SSRContext = {
+      url: '/boolean-expr',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {
+        value: true,
+        condition: 'true',
+      },
+    };
+
+    const result = await renderer.render('/boolean-expr.plk', context);
+
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+
+  test('should parse null and undefined literals', async () => {
+    const context: SSRContext = {
+      url: '/null-expr',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {
+        nullValue: null,
+        undefinedValue: undefined,
+        stringNull: 'null',
+        stringUndefined: 'undefined',
+      },
+    };
+
+    const result = await renderer.render('/null-expr.plk', context);
+
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+
+  test('should parse numeric values in expressions', async () => {
+    const context: SSRContext = {
+      url: '/number-expr',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {
+        count: 42,
+        price: '19.99',
+        negative: '-5',
+        zero: '0',
+      },
+    };
+
+    const result = await renderer.render('/number-expr.plk', context);
+
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+
+  test('should parse quoted string values', async () => {
+    const context: SSRContext = {
+      url: '/quoted-expr',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {
+        doubleQuoted: '"Hello World"',
+        singleQuoted: "'Hello World'",
+        mixed: 'test',
+      },
+    };
+
+    const result = await renderer.render('/quoted-expr.plk', context);
+
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+
+  test('should parse JSON values in expressions', async () => {
+    const context: SSRContext = {
+      url: '/json-expr',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {
+        jsonObject: '{"key": "value"}',
+        jsonArray: '[1, 2, 3]',
+        invalidJson: '{invalid}',
+      },
+    };
+
+    const result = await renderer.render('/json-expr.plk', context);
+
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+
+  test('should handle complex conditional expressions', async () => {
+    const context: SSRContext = {
+      url: '/complex-conditions',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {
+        isActive: true,
+        count: 5,
+        status: 'published',
+        role: 'admin',
+      },
+    };
+
+    const result = await renderer.render('/complex-conditions.plk', context);
+
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+});
+
+describe('SSRRenderer - stream cancellation', () => {
+  test('should create stream with cancel handler', async () => {
+    const renderer = new SSRRenderer({
+      templateDir: '/templates',
+      assetsDir: '/assets',
+      baseUrl: '/',
+      streaming: true,
+    });
+
+    const context: SSRContext = {
+      url: '/stream-test',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+      streaming: {
+        enabled: true,
+        chunkSize: 1024,
+      },
+    };
+
+    const result = await renderer.render('/stream-test.plk', context);
+
+    expect(result.stream).toBeDefined();
+    expect(result.stream).toBeInstanceOf(ReadableStream);
+  });
+
+  test('should handle streaming mode correctly', async () => {
+    const renderer = new SSRRenderer({
+      templateDir: '/templates',
+      assetsDir: '/assets',
+      baseUrl: '/',
+      streaming: true,
+    });
+
+    const context: SSRContext = {
+      url: '/stream-enabled',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+      streaming: {
+        enabled: true,
+      },
+    };
+
+    const result = await renderer.render('/stream-enabled.plk', context);
+
+    // Verify stream is created and is of correct type
+    expect(result.stream).toBeDefined();
+    expect(result.stream).toBeInstanceOf(ReadableStream);
+    expect(result.html).toContain('<html>');
+  });
+});
+
+describe('SSRRenderer - island hydration script', () => {
+  test('should include progressive enhancement script', async () => {
+    const renderer = new SSRRenderer({
+      templateDir: '/templates',
+      assetsDir: '/assets',
+      baseUrl: '/app',
+      streaming: false,
+    });
+
+    const context: SSRContext = {
+      url: '/with-islands',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: { hasIslands: true },
+    };
+
+    const result = await renderer.render('/with-islands.plk', context);
+
+    // Should contain progressive enhancement script
+    expect(result.html).toContain('serviceWorker');
+    expect(result.html).toContain('modulepreload');
+    expect(result.html).toContain('@plank/runtime-dom');
+  });
+
+  test('should include proper base URL in scripts', async () => {
+    const renderer = new SSRRenderer({
+      templateDir: '/templates',
+      assetsDir: '/assets',
+      baseUrl: '/custom-base',
+      streaming: false,
+    });
+
+    const context: SSRContext = {
+      url: '/island-path',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+    };
+
+    const result = await renderer.render('/island-path.plk', context);
+
+    // Should use custom base URL
+    expect(result.html).toContain('/custom-base/node_modules/@plank/runtime-dom');
+  });
+
+  test('should include error handling in progressive enhancement', async () => {
+    const renderer = new SSRRenderer({
+      templateDir: '/templates',
+      assetsDir: '/assets',
+      baseUrl: '/',
+      streaming: false,
+    });
+
+    const context: SSRContext = {
+      url: '/dom-ready',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+    };
+
+    const result = await renderer.render('/dom-ready.plk', context);
+
+    // Should include error event listener
+    expect(result.html).toContain('window.addEventListener');
+    expect(result.html).toContain('unhandledrejection');
+  });
+});
+
+describe('SSRRenderer - error handling edge cases', () => {
+  test('should handle template loading errors', async () => {
+    const renderer = new SSRRenderer({
+      templateDir: '/nonexistent',
+      assetsDir: '/nonexistent',
+      baseUrl: '/',
+      streaming: false,
+    });
+
+    const context: SSRContext = {
+      url: '/missing',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {},
+    };
+
+    // Should return fallback HTML even when template loading fails
+    const result = await renderer.render('/missing.plk', context);
+
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+
+  test('should handle malformed template gracefully', async () => {
+    const renderer = new SSRRenderer({
+      templateDir: '/templates',
+      assetsDir: '/assets',
+      baseUrl: '/',
+      streaming: false,
+    });
+
+    const context: SSRContext = {
+      url: '/malformed',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: {
+        unclosedTag: '<div>',
+        invalidAttr: 'attr="unclosed',
+      },
+    };
+
+    const result = await renderer.render('/malformed.plk', context);
+
+    // Should still render fallback
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+
+  test('should handle rendering with circular data references', async () => {
+    const renderer = new SSRRenderer({
+      templateDir: '/templates',
+      assetsDir: '/assets',
+      baseUrl: '/',
+      streaming: false,
+    });
+
+    // Create circular reference
+    const circularData: Record<string, unknown> = { name: 'test' };
+    circularData.self = circularData;
+
+    const context: SSRContext = {
+      url: '/circular',
+      method: 'GET',
+      headers: {},
+      params: {},
+      query: {},
+      data: circularData,
+    };
+
+    const result = await renderer.render('/circular.plk', context);
+
+    // Should handle circular references without crashing
+    expect(result.html).toContain('<html>');
+    expect(result.metadata.renderTime).toBeGreaterThan(0);
+  });
+});

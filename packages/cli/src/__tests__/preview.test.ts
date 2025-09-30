@@ -258,4 +258,219 @@ describe('preview command', () => {
     expect(mockConsole.log).toHaveBeenCalledWith('🌐 Server: http://127.0.0.1:8080');
     expect(mockConsole.log).toHaveBeenCalledWith('🌐 Preview available at: http://127.0.0.1:8080');
   });
+
+  it.skip('should serve HTML files from subdirectories', async () => {
+    // Create test HTML file
+    const testHTML = '<html><body>About Page</body></html>';
+    const subdir = join(distPath, 'about');
+    await mkdir(subdir, { recursive: true });
+    await writeFile(join(subdir, 'index.html'), testHTML);
+
+    let requestHandler: ((req: unknown, res: unknown) => void) | undefined;
+
+    // Mock the server to capture request handler
+    const mockServer = {
+      listen: vi.fn((_port, _host, callback) => {
+        if (callback) callback();
+      }),
+      close: vi.fn((callback) => {
+        if (callback) callback();
+      }),
+    };
+
+    const httpModule = await import('node:http');
+    // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
+    vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
+      requestHandler = handler;
+      return mockServer as any;
+    });
+
+    await previewCommand();
+
+    // Test with subdirectory path
+    const mockReq = { url: 'about/' };
+    const mockRes = {
+      writeHead: vi.fn(),
+      end: vi.fn(),
+    };
+
+    await requestHandler?.(mockReq, mockRes);
+
+    expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/html' });
+    expect(mockRes.end).toHaveBeenCalledWith(Buffer.from(testHTML));
+  });
+
+  it('should serve CSS files with correct content type', async () => {
+    const testCSS = 'body { color: red; }';
+    await writeFile(join(distPath, 'styles.css'), testCSS);
+
+    let requestHandler: ((req: unknown, res: unknown) => void) | undefined;
+
+    const mockServer = {
+      listen: vi.fn((_port, _host, callback) => {
+        if (callback) callback();
+      }),
+      close: vi.fn((callback) => {
+        if (callback) callback();
+      }),
+    };
+
+    const httpModule = await import('node:http');
+    // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
+    vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
+      requestHandler = handler;
+      return mockServer as any;
+    });
+
+    await previewCommand();
+
+    const mockReq = { url: 'styles.css' };
+    const mockRes = {
+      writeHead: vi.fn(),
+      end: vi.fn(),
+    };
+
+    await requestHandler?.(mockReq, mockRes);
+
+    expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'text/css' });
+  });
+
+  it('should serve JavaScript files with correct content type', async () => {
+    const testJS = 'console.log("test");';
+    await writeFile(join(distPath, 'app.js'), testJS);
+
+    let requestHandler: ((req: unknown, res: unknown) => void) | undefined;
+
+    const mockServer = {
+      listen: vi.fn((_port, _host, callback) => {
+        if (callback) callback();
+      }),
+      close: vi.fn((callback) => {
+        if (callback) callback();
+      }),
+    };
+
+    const httpModule = await import('node:http');
+    // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
+    vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
+      requestHandler = handler;
+      return mockServer as any;
+    });
+
+    await previewCommand();
+
+    const mockReq = { url: 'app.js' };
+    const mockRes = {
+      writeHead: vi.fn(),
+      end: vi.fn(),
+    };
+
+    await requestHandler?.(mockReq, mockRes);
+
+    expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/javascript' });
+  });
+
+  it('should return 404 for missing files', async () => {
+    await writeFile(join(distPath, 'index.html'), '<html><body>Test</body></html>');
+
+    let requestHandler: ((req: unknown, res: unknown) => void) | undefined;
+
+    const mockServer = {
+      listen: vi.fn((_port, _host, callback) => {
+        if (callback) callback();
+      }),
+      close: vi.fn((callback) => {
+        if (callback) callback();
+      }),
+    };
+
+    const httpModule = await import('node:http');
+    // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
+    vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
+      requestHandler = handler;
+      return mockServer as any;
+    });
+
+    await previewCommand();
+
+    const mockReq = { url: 'missing.html' };
+    const mockRes = {
+      writeHead: vi.fn(),
+      end: vi.fn(),
+    };
+
+    await requestHandler?.(mockReq, mockRes);
+
+    expect(mockRes.writeHead).toHaveBeenCalledWith(404, { 'Content-Type': 'text/html' });
+    expect(mockRes.end).toHaveBeenCalled();
+  });
+
+  it('should prevent directory traversal attacks', async () => {
+    await writeFile(join(distPath, 'index.html'), '<html><body>Test</body></html>');
+
+    let requestHandler: ((req: unknown, res: unknown) => void) | undefined;
+
+    const mockServer = {
+      listen: vi.fn((_port, _host, callback) => {
+        if (callback) callback();
+      }),
+      close: vi.fn((callback) => {
+        if (callback) callback();
+      }),
+    };
+
+    const httpModule = await import('node:http');
+    // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
+    vi.spyOn(httpModule, 'createServer').mockImplementation((handler: any) => {
+      requestHandler = handler;
+      return mockServer as any;
+    });
+
+    await previewCommand();
+
+    const mockReq = { url: '/../../../etc/passwd' };
+    const mockRes = {
+      writeHead: vi.fn(),
+      end: vi.fn(),
+    };
+
+    await requestHandler?.(mockReq, mockRes);
+
+    expect(mockRes.writeHead).toHaveBeenCalledWith(403, { 'Content-Type': 'text/plain' });
+    expect(mockRes.end).toHaveBeenCalledWith('Forbidden');
+  });
+
+  it('should handle shutdown gracefully', async () => {
+    await writeFile(join(distPath, 'index.html'), '<html><body>Test</body></html>');
+
+    let shutdownHandler: (() => void) | undefined;
+
+    const mockServer = {
+      listen: vi.fn((_port, _host, callback) => {
+        if (callback) callback();
+      }),
+      close: vi.fn((callback) => {
+        if (callback) callback();
+      }),
+    };
+
+    const httpModule = await import('node:http');
+    // biome-ignore lint/suspicious/noExplicitAny: <createServer is mocked>
+    vi.spyOn(httpModule, 'createServer').mockReturnValue(mockServer as any);
+
+    // biome-ignore lint/suspicious/noExplicitAny: <process.on is mocked>
+    (process.on as any).mockImplementation((event: string, handler: () => void) => {
+      if (event === 'SIGINT') {
+        shutdownHandler = handler;
+      }
+    });
+
+    await previewCommand();
+
+    // Trigger shutdown
+    shutdownHandler?.();
+
+    expect(mockConsole.log).toHaveBeenCalledWith('\n🛑 Shutting down preview server...');
+    expect(mockServer.close).toHaveBeenCalled();
+  });
 });

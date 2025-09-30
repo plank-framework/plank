@@ -324,14 +324,17 @@ export class SSRRenderer {
 
     writer.write('>');
 
-    // For now, render placeholder content
-    // TODO: Implement proper island SSR rendering
+    // Render island content with fallback support
+    // Islands are hydrated on the client, but we render their children as SSR content
     if (node.children && node.children.length > 0) {
       for (const child of node.children) {
         this.renderNode(child, context, writer);
       }
     } else {
-      writer.write('<!-- Island placeholder -->');
+      // Render a loading state that will be replaced during hydration
+      writer.write('<div class="island-loading" style="opacity: 0.6;">');
+      writer.write('  <div aria-live="polite" aria-busy="true">Loading...</div>');
+      writer.write('</div>');
     }
 
     writer.write('</div>');
@@ -600,29 +603,32 @@ export class SSRRenderer {
   private generateProgressiveEnhancementScript(): string {
     return `<script type="module">
       // Progressive enhancement for Plank SSR
-      // TODO: Implement service worker for offline support
-      // if ('serviceWorker' in navigator) {
-      //   navigator.serviceWorker.register('${this.config.baseUrl}/sw.js').catch(() => {
-      //     // Service worker registration failed, continue without it
-      //   });
-      // }
 
-      // Preload critical resources
+      // Service worker for offline support (opt-in)
+      // Note: Service worker implementation is deferred to Phase C
+      // Users can manually add their own service worker if needed
+      if ('serviceWorker' in navigator && document.documentElement.hasAttribute('data-sw-enabled')) {
+        navigator.serviceWorker.register('${this.config.baseUrl}/sw.js').catch((error) => {
+          console.debug('Service worker registration skipped:', error.message);
+        });
+      }
+
+      // Preload critical resources for faster hydration
       const link = document.createElement('link');
       link.rel = 'modulepreload';
       link.href = '${this.config.baseUrl}/node_modules/@plank/runtime-dom/dist/index.js';
       document.head.appendChild(link);
 
-      // Add error boundary for client-side errors
+      // Global error boundary for client-side errors
       window.addEventListener('error', (event) => {
         console.error('Plank SSR Error:', event.error);
-        // Could send to error reporting service
+        // Error reporting can be integrated via custom error handlers
       });
 
-      // Add unhandled promise rejection handler
+      // Handle unhandled promise rejections
       window.addEventListener('unhandledrejection', (event) => {
         console.error('Plank SSR Unhandled Promise Rejection:', event.reason);
-        // Could send to error reporting service
+        event.preventDefault(); // Prevent default browser error handling
       });
     </script>`;
   }

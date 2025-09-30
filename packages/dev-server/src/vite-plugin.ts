@@ -1025,15 +1025,18 @@ function parseElementDirectives(
   const tagEnd = findTagEnd(html, tagStart, tagNameMatch[0].length);
   const attrs = html.substring(tagStart + tag.length + 1, tagEnd).trim();
 
+  // Always increment the index for this tag type (even if no directives)
+  // This ensures querySelectorAll('tag')[index] matches the correct element
+  const currentIndex = tagIndexMap.get(tag) ?? 0;
+  tagIndexMap.set(tag, currentIndex + 1);
+
   if (attrs) {
     const matches = parseDirectiveMatches(attrs);
     const hasDirectives =
       matches.on || matches.bind || matches.class || matches.xIf || matches.xFor;
 
     if (hasDirectives) {
-      const currentIndex = tagIndexMap.get(tag) ?? 0;
       addDirectiveIfMatched(directives, matches, tag, attrs, currentIndex);
-      tagIndexMap.set(tag, currentIndex + 1);
     }
   }
 

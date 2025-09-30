@@ -1,0 +1,54 @@
+{
+  "name": "@plank/resume",
+  "version": "0.1.0",
+  "description": "Resumability serialization for Plank framework - instant interactivity without re-execution",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "lint": "biome lint .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format .",
+    "format:fix": "biome check --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:ui": "vitest run --coverage --ui"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "plank",
+    "resumability",
+    "hydration",
+    "serialization",
+    "instant-interactivity"
+  ],
+  "author": "Plank Framework",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@plank/runtime-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "happy-dom": "^16.0.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.0.0"
+  }
+}

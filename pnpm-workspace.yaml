@@ -2,3 +2,4 @@ packages:
   - 'packages/*'
   - 'examples/*'
   - 'packages/adapters/*'
+  - 'packages/interop/*'

@@ -2,6 +2,14 @@
  * @fileoverview File-based routing system for Plank applications
  */
 
+// Client-side router
+export {
+  ClientRouter,
+  type ClientRouterConfig,
+  createClientRouter,
+  type NavigationEvent,
+  type NavigationOptions,
+} from './client-router.js';
 // Manifest generation
 export {
   generateRobotsTxt,

@@ -30,7 +30,10 @@
     "test:coverage": "vitest run --coverage",
     "test:coverage:ui": "vitest run --coverage --ui"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/jsdom": "^27.0.0",
+    "jsdom": "^24.1.0"
+  },
   "publishConfig": {
     "access": "public"
   }

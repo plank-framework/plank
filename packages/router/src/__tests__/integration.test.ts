@@ -3,8 +3,8 @@
  */
 
 import { afterEach, describe, expect, test } from 'vitest';
-import { FileBasedRouter } from '../router.js';
 import { discoverRouteFiles } from '../route-discovery.js';
+import { FileBasedRouter } from '../router.js';
 import type { RouterConfig } from '../types.js';
 
 describe('Router Integration Tests', () => {

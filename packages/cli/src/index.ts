@@ -69,8 +69,9 @@ program
   .option('-d, --dist <dir>', 'Distribution directory to analyze', './dist')
   .option('-r, --route <route>', 'Analyze specific route')
   .option('-b, --budget <type>', 'Check specific budget type (marketing, app, static)')
-  .option('--fail-on-exceed', 'Fail if budgets are exceeded')
+  .option('--fail-on-exceed', 'Fail if budgets are exceeded (CI mode)')
   .option('-f, --format <format>', 'Output format (text, json, html)', 'text')
+  .option('--what-ships', 'Show "what ships" visual report')
   .action(async (options) => {
     await analyzeCommand(options);
   });

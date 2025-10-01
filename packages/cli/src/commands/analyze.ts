@@ -3,10 +3,11 @@
  */
 
 import { existsSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { gzip } from 'node:zlib';
 import { promisify } from 'node:util';
+import { gzip } from 'node:zlib';
+import { generateWhatShipsReport } from '../analyzer/what-ships.js';
 import { loadConfig } from '../config.js';
 
 const gzipAsync = promisify(gzip);
@@ -25,6 +26,8 @@ export interface AnalyzeOptions {
   failOnExceed?: boolean;
   /** Output format (text, json, html) */
   format?: 'text' | 'json' | 'html';
+  /** Show "what ships" report */
+  whatShips?: boolean;
 }
 
 /**
@@ -121,6 +124,10 @@ export async function analyzeCommand(options: AnalyzeOptions = {}): Promise<void
       console.log(JSON.stringify(report, null, 2));
     } else if (options.format === 'html') {
       generateHTMLReport(report);
+    } else if (options.whatShips) {
+      // Display "what ships" report
+      const whatShips = generateWhatShipsReport(report);
+      console.log(whatShips);
     } else {
       displayTextReport(report);
     }
@@ -173,7 +180,8 @@ async function analyzeBundles(
     passingRoutes: routes.filter((r) => r.status === 'pass').length,
     failingRoutes: routes.filter((r) => r.status === 'fail').length,
     totalJS: routes.reduce((sum, r) => sum + r.jsBytes, 0),
-    averageJS: routes.length > 0 ? routes.reduce((sum, r) => sum + r.jsBytes, 0) / routes.length : 0,
+    averageJS:
+      routes.length > 0 ? routes.reduce((sum, r) => sum + r.jsBytes, 0) / routes.length : 0,
   };
 
   return {
@@ -270,7 +278,11 @@ function determineBudgetType(routePath: string): string {
 /**
  * Generate recommendations based on analysis
  */
-function generateRecommendations(totalJS: number, budget: number, breakdown: BundleBreakdown): string[] {
+function generateRecommendations(
+  totalJS: number,
+  budget: number,
+  breakdown: BundleBreakdown
+): string[] {
   const recommendations: string[] = [];
 
   if (totalJS > budget) {
@@ -371,7 +383,9 @@ function displayTextReport(report: BudgetReport): void {
 
     console.log(`${statusIcon} ${route.path}`);
     console.log(`   Type: ${route.budgetType}`);
-    console.log(`   JavaScript: ${formatBytes(route.jsBytes)} gzip (${formatBytes(route.jsBytesRaw)} raw)`);
+    console.log(
+      `   JavaScript: ${formatBytes(route.jsBytes)} gzip (${formatBytes(route.jsBytesRaw)} raw)`
+    );
     console.log(`   Budget: ${formatBytes(route.budget)} (${budgetPercent}% used)`);
 
     if (route.jsBytes > 0) {

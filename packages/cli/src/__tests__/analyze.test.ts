@@ -94,8 +94,8 @@ describe('analyze command', () => {
     await analyzeCommand({ format: 'json' });
 
     // Should output valid JSON
-    const jsonCalls = mockConsole.log.mock.calls.filter((call) =>
-      typeof call[0] === 'string' && call[0].startsWith('{')
+    const jsonCalls = mockConsole.log.mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].startsWith('{')
     );
 
     expect(jsonCalls.length).toBeGreaterThan(0);

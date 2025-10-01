@@ -370,7 +370,9 @@ describe('preview command', () => {
 
     await requestHandler?.(mockReq, mockRes);
 
-    expect(mockRes.writeHead).toHaveBeenCalledWith(200, { 'Content-Type': 'application/javascript' });
+    expect(mockRes.writeHead).toHaveBeenCalledWith(200, {
+      'Content-Type': 'application/javascript',
+    });
   });
 
   it('should return 404 for missing files', async () => {

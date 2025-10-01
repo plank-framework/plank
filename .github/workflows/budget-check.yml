@@ -1,0 +1,93 @@
+name: Performance Budget Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  budget-check:
+    name: Check Bundle Budgets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Build examples
+        run: |
+          cd examples/marketing-zero-js && pnpm build
+          cd ../island-counter && pnpm build
+
+      - name: Analyze bundle sizes
+        run: |
+          cd examples/marketing-zero-js
+          plank analyze --fail-on-exceed --format=json > budget-report.json
+
+          cd ../island-counter
+          plank analyze --fail-on-exceed --format=json > budget-report.json
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## 📊 Bundle Size Analysis\n\n';
+
+            // Marketing example
+            const marketingReport = JSON.parse(
+              fs.readFileSync('examples/marketing-zero-js/budget-report.json', 'utf8')
+            );
+
+            comment += '### Marketing Example\n';
+            comment += `- Total Routes: ${marketingReport.summary.totalRoutes}\n`;
+            comment += `- ✅ Passing: ${marketingReport.summary.passingRoutes}\n`;
+            comment += `- ❌ Failing: ${marketingReport.summary.failingRoutes}\n`;
+            comment += `- Total JS: ${(marketingReport.summary.totalJS / 1024).toFixed(2)} KB\n\n`;
+
+            // Island counter example
+            const islandReport = JSON.parse(
+              fs.readFileSync('examples/island-counter/budget-report.json', 'utf8')
+            );
+
+            comment += '### Island Counter Example\n';
+            comment += `- Total Routes: ${islandReport.summary.totalRoutes}\n`;
+            comment += `- ✅ Passing: ${islandReport.summary.passingRoutes}\n`;
+            comment += `- ❌ Failing: ${islandReport.summary.failingRoutes}\n`;
+            comment += `- Total JS: ${(islandReport.summary.totalJS / 1024).toFixed(2)} KB\n`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Upload budget reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: budget-reports
+          path: |
+            examples/*/budget-report.json
+          retention-days: 30
+

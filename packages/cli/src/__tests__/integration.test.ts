@@ -2,12 +2,12 @@
  * @fileoverview Integration tests for CLI commands with other packages
  */
 
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { mkdir, writeFile, rm, readFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { buildCommand } from '../commands/build.js';
 import { createCommand } from '../commands/create.js';
 import { devCommand } from '../commands/dev.js';
-import { buildCommand } from '../commands/build.js';
 import { previewCommand } from '../commands/preview.js';
 
 // Mock dependencies to avoid actual server creation

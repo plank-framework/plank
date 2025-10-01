@@ -1,0 +1,64 @@
+{
+  "name": "@plank/cache",
+  "version": "0.1.0",
+  "description": "Tag-based cache invalidation for Plank framework",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/adapters/server.d.ts",
+      "import": "./dist/adapters/server.js"
+    },
+    "./edge": {
+      "types": "./dist/adapters/edge.d.ts",
+      "import": "./dist/adapters/edge.js"
+    },
+    "./client": {
+      "types": "./dist/adapters/client.d.ts",
+      "import": "./dist/adapters/client.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "lint": "biome lint .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format .",
+    "format:fix": "biome check --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:ui": "vitest run --coverage --ui"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "plank",
+    "cache",
+    "invalidation",
+    "tags",
+    "performance"
+  ],
+  "author": "Plank Framework",
+  "license": "Apache-2.0",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "happy-dom": "^16.0.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.0.0"
+  }
+}

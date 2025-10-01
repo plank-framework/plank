@@ -62,7 +62,7 @@ importers:
     devDependencies:
       plank:
         specifier: workspace:*
-        version: link:../../packages/cli
+        version: link:../..
 
   examples/marketing-zero-js:
     dependencies:
@@ -81,13 +81,28 @@ importers:
     devDependencies:
       plank:
         specifier: workspace:*
-        version: link:../../packages/cli
+        version: link:../..
 
   packages/actions:
     dependencies:
       '@plank/runtime-core':
         specifier: workspace:*
         version: link:../runtime-core
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.18
+      happy-dom:
+        specifier: ^16.0.0
+        version: 16.8.1
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.2
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@20.19.18)(@vitest/ui@3.2.4)(happy-dom@16.8.1)(jsdom@24.1.3)(yaml@2.8.1)
+
+  packages/cache:
     devDependencies:
       '@types/node':
         specifier: ^20.0.0

@@ -6,6 +6,7 @@
  */
 
 import { program } from 'commander';
+import { analyzeCommand } from './commands/analyze.js';
 import { buildCommand } from './commands/build.js';
 import { createCommand } from './commands/create.js';
 import { devCommand } from './commands/dev.js';
@@ -65,11 +66,13 @@ program
 program
   .command('analyze')
   .description('Analyze bundle size and performance budgets')
-  .option('--fail-on-budget-exceeded', 'Fail if budgets are exceeded')
-  .action((_options) => {
-    console.log('Analyzing bundle size and performance budgets...');
-    // TODO: Implement budget analysis
-    // This is a placeholder for Phase B implementation
+  .option('-d, --dist <dir>', 'Distribution directory to analyze', './dist')
+  .option('-r, --route <route>', 'Analyze specific route')
+  .option('-b, --budget <type>', 'Check specific budget type (marketing, app, static)')
+  .option('--fail-on-exceed', 'Fail if budgets are exceeded')
+  .option('-f, --format <format>', 'Output format (text, json, html)', 'text')
+  .action(async (options) => {
+    await analyzeCommand(options);
   });
 
 program.parse();

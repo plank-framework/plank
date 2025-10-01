@@ -20,6 +20,12 @@ export interface PlankConfig {
     minify?: boolean;
     sourcemap?: boolean;
   };
+  budgets?: {
+    marketing?: number; // KB gzipped
+    app?: number; // KB gzipped
+    static?: number; // KB gzipped
+  };
+  routes?: Record<string, 'marketing' | 'app' | 'static'>;
 }
 
 export const defaultConfig: PlankConfig = {

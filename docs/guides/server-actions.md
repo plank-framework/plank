@@ -24,7 +24,7 @@ Server actions are **server-side functions** bound to forms or buttons. They:
 <script type="server">
 export async function createTodo(formData, context) {
   const title = formData.get('title');
-  
+
   // Validate
   if (!title || title.length < 3) {
     return {
@@ -32,17 +32,17 @@ export async function createTodo(formData, context) {
       error: 'Title must be at least 3 characters',
     };
   }
-  
+
   // Save to database
   const todo = await db.todos.create({
     title,
     userId: context.user.id,
     createdAt: new Date(),
   });
-  
+
   // Invalidate cache
   await context.cache.invalidateTags(['todos']);
-  
+
   return {
     success: true,
     data: { todo },
@@ -79,10 +79,10 @@ export async function deletePost(formData, context) {
       error: 'Authentication required',
     };
   }
-  
+
   const postId = formData.get('postId');
   const post = await db.posts.findById(postId);
-  
+
   // Check authorization
   if (post.authorId !== context.user.id) {
     return {
@@ -90,10 +90,10 @@ export async function deletePost(formData, context) {
       error: 'Not authorized',
     };
   }
-  
+
   await db.posts.delete(postId);
   await context.cache.invalidateTags(['posts', `post-${postId}`]);
-  
+
   return { success: true };
 }
 ```
@@ -144,18 +144,18 @@ import { useAction } from '@plank/actions';
 
 const deleteTodo = useAction('/api/todos/delete', {
   method: 'DELETE',
-  
+
   // Before request
   onOptimistic: (variables) => {
     // Remove from UI immediately
     todos(todos().filter(t => t.id !== variables.id));
   },
-  
+
   // On success
   onSuccess: (data) => {
     showMessage('Todo deleted successfully');
   },
-  
+
   // On error (auto-rollback)
   onError: (error) => {
     // UI automatically reverts
@@ -185,18 +185,18 @@ import { enhanceForm } from '@plank/actions';
 enhanceForm('#contact-form', {
   action: '/api/contact',
   method: 'POST',
-  
+
   // Show loading state
   onSubmit: () => {
     document.querySelector('button').disabled = true;
   },
-  
+
   // Handle success
   onSuccess: (data) => {
     document.querySelector('#contact-form').reset();
     showMessage('Message sent!');
   },
-  
+
   // Handle errors
   onError: (error) => {
     if (error.validationErrors) {
@@ -205,7 +205,7 @@ enhanceForm('#contact-form', {
       showMessage(error.message);
     }
   },
-  
+
   // Always cleanup
   onSettled: () => {
     document.querySelector('button').disabled = false;
@@ -222,16 +222,16 @@ Without JavaScript, the form **still works** - it submits normally to the server
 
 ```html
 <form use:action={createUser}>
-  <input 
-    name="email" 
-    type="email" 
-    required 
+  <input
+    name="email"
+    type="email"
+    required
     pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
   />
-  <input 
-    name="password" 
-    type="password" 
-    required 
+  <input
+    name="password"
+    type="password"
+    required
     minlength="8"
   />
   <button>Sign Up</button>
@@ -244,25 +244,25 @@ Without JavaScript, the form **still works** - it submits normally to the server
 export async function createUser(formData, context) {
   const email = formData.get('email');
   const password = formData.get('password');
-  
+
   // Validate
   const errors: Record<string, string> = {};
-  
+
   if (!email || !email.includes('@')) {
     errors.email = 'Valid email is required';
   }
-  
+
   if (!password || password.length < 8) {
     errors.password = 'Password must be at least 8 characters';
   }
-  
+
   if (Object.keys(errors).length > 0) {
     return {
       success: false,
       validationErrors: errors,
     };
   }
-  
+
   // Create user...
   return { success: true };
 }
@@ -276,12 +276,12 @@ export async function createUser(formData, context) {
     <input name="email" type="email" />
     <span class="error" id="email-error"></span>
   </div>
-  
+
   <div>
     <input name="password" type="password" />
     <span class="error" id="password-error"></span>
   </div>
-  
+
   <button>Sign Up</button>
 </form>
 
@@ -315,7 +315,7 @@ Handle multipart form data:
 export async function uploadFile(formData, context) {
   const file = formData.get('file');
   const title = formData.get('title');
-  
+
   // Validate file
   if (!file || file.size > 5 * 1024 * 1024) {
     return {
@@ -323,11 +323,11 @@ export async function uploadFile(formData, context) {
       error: 'File must be less than 5 MB',
     };
   }
-  
+
   // Save file
   const buffer = await file.arrayBuffer();
   const path = await saveToStorage(buffer, file.name);
-  
+
   // Create database record
   const upload = await db.uploads.create({
     title,
@@ -335,7 +335,7 @@ export async function uploadFile(formData, context) {
     size: file.size,
     mimeType: file.type,
   });
-  
+
   return {
     success: true,
     data: { upload },
@@ -352,15 +352,15 @@ Actions integrate with cache:
 export async function updatePost(formData, context) {
   const postId = formData.get('postId');
   const title = formData.get('title');
-  
+
   await db.posts.update(postId, { title });
-  
+
   // Invalidate specific post and list
   await context.cache.invalidateTags([
     `post-${postId}`,
     'posts-list',
   ]);
-  
+
   return { success: true };
 }
 ```
@@ -375,7 +375,7 @@ export async function createPost(formData, context) {
     title: formData.get('title'),
     content: formData.get('content'),
   });
-  
+
   return {
     success: true,
     redirect: `/posts/${post.id}`,
@@ -390,12 +390,12 @@ export async function riskyAction(formData, context) {
   try {
     // Attempt action
     await externalAPI.call();
-    
+
     return { success: true };
   } catch (error) {
     // Log error
     console.error('Action failed:', error);
-    
+
     // Return user-friendly message
     return {
       success: false,
@@ -417,24 +417,24 @@ describe('createTodo', () => {
   test('creates todo successfully', async () => {
     const formData = new FormData();
     formData.append('title', 'Test todo');
-    
+
     const context = {
       user: { id: 1 },
       cache: mockCache,
     };
-    
+
     const result = await createTodo(formData, context);
-    
+
     expect(result.success).toBe(true);
     expect(result.data.todo.title).toBe('Test todo');
   });
-  
+
   test('validates title length', async () => {
     const formData = new FormData();
     formData.append('title', 'ab'); // Too short
-    
+
     const result = await createTodo(formData, {});
-    
+
     expect(result.success).toBe(false);
     expect(result.error).toContain('at least 3 characters');
   });

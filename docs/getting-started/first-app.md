@@ -38,10 +38,10 @@ Create `app/routes/index.plk`:
 <body>
   <main>
     <h1>My Todos</h1>
-    
+
     <!-- This is static HTML - 0 KB JS -->
     <p>A simple todo app built with Plank</p>
-    
+
     <!-- This island loads JavaScript only for interactivity -->
     <island src="../islands/TodoList.plk" client:load>
       <div>Loading todos...</div>
@@ -65,7 +65,7 @@ const todos = signal([
   { id: 2, title: 'Build an app', completed: false },
 ]);
 
-const activeTodos = computed(() => 
+const activeTodos = computed(() =>
   todos().filter(t => !t.completed)
 );
 
@@ -73,11 +73,11 @@ const activeTodos = computed(() =>
 function render() {
   const list = document.querySelector('#todo-list');
   if (!list) return;
-  
+
   list.innerHTML = todos().map(todo => `
     <li class="todo-item ${todo.completed ? 'completed' : ''}">
-      <input 
-        type="checkbox" 
+      <input
+        type="checkbox"
         ${todo.completed ? 'checked' : ''}
         data-id="${todo.id}"
       />
@@ -85,7 +85,7 @@ function render() {
       <button data-id="${todo.id}">Delete</button>
     </li>
   `).join('');
-  
+
   // Update count
   document.querySelector('#active-count').textContent = activeTodos();
 }
@@ -93,14 +93,14 @@ function render() {
 // Event delegation
 document.addEventListener('click', (e) => {
   const target = e.target;
-  
+
   if (target.matches('input[type="checkbox"]')) {
     const id = parseInt(target.dataset.id);
-    todos(todos().map(t => 
+    todos(todos().map(t =>
       t.id === id ? { ...t, completed: !t.completed } : t
     ));
   }
-  
+
   if (target.matches('button')) {
     const id = parseInt(target.dataset.id);
     todos(todos().filter(t => t.id !== id));
@@ -120,16 +120,16 @@ render();
   <div class="todo-stats">
     <span id="active-count">0</span> active todos
   </div>
-  
+
   <ul id="todo-list">
     <!-- Will be rendered by JavaScript -->
   </ul>
-  
+
   <form id="add-todo">
-    <input 
-      type="text" 
-      placeholder="What needs to be done?" 
-      required 
+    <input
+      type="text"
+      placeholder="What needs to be done?"
+      required
     />
     <button type="submit">Add</button>
   </form>

@@ -98,7 +98,7 @@ const todos = signal([
   { id: 2, title: 'Build app', done: false },
 ]);
 
-const remaining = computed(() => 
+const remaining = computed(() =>
   todos().filter(t => !t.done).length
 );
 
@@ -118,7 +118,7 @@ function addTodo(title) {
 
 // Toggle todo
 function toggleTodo(id) {
-  todos(todos().map(t => 
+  todos(todos().map(t =>
     t.id === id ? { ...t, done: !t.done } : t
   ));
 }
@@ -194,11 +194,11 @@ const isActive = signal(true);
 
 effect(() => {
   if (!isActive()) return;
-  
+
   const interval = setInterval(() => {
     console.log('Tick');
   }, 1000);
-  
+
   // Cleanup when effect re-runs or unmounts
   return () => clearInterval(interval);
 });
@@ -213,7 +213,7 @@ effect(() => {
 const total = () => items().reduce((sum, item) => sum + item.price, 0);
 
 // ✅ Good: Cached until items() changes
-const total = computed(() => 
+const total = computed(() =>
   items().reduce((sum, item) => sum + item.price, 0)
 );
 ```
@@ -331,7 +331,7 @@ const error = signal(null);
 async function fetchData() {
   isLoading(true);
   error(null);
-  
+
   try {
     const response = await fetch('/api/data');
     data(await response.json());
@@ -356,7 +356,7 @@ const paginatedItems = computed(() => {
   return items().slice(start, end);
 });
 
-const totalPages = computed(() => 
+const totalPages = computed(() =>
   Math.ceil(items().length / pageSize())
 );
 ```

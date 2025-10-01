@@ -134,8 +134,8 @@ In any route (`app/routes/index.plk`):
 Pass data from server to island:
 
 ```html
-<island 
-  src="../islands/Product.plk" 
+<island
+  src="../islands/Product.plk"
   client:visible
   props:product-id="12345"
   props:name="Coffee Mug"

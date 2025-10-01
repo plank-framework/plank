@@ -31,8 +31,8 @@ This scaffolds a new Plank project with:
     Full-Stack App (35 KB JS)
 ```
 
-**Marketing Site**: Static content, zero JavaScript  
-**App with Islands**: Some interactivity with islands  
+**Marketing Site**: Static content, zero JavaScript
+**App with Islands**: Some interactivity with islands
 **Full-Stack App**: Complete app with actions, routing, caching
 
 ### 3. Install Dependencies

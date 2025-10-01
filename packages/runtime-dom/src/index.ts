@@ -8,4 +8,7 @@ export * from './actions.js';
 export * from './bindings.js';
 export * from './directives.js';
 export * from './dom-ir.js';
+export * from './focus-management.js';
 export * from './islands.js';
+export * from './router-integration.js';
+export * from './view-transitions.js';

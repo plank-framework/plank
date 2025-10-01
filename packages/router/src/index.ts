@@ -10,6 +10,13 @@ export {
   type NavigationEvent,
   type NavigationOptions,
 } from './client-router.js';
+// Enhanced router with view transitions
+export {
+  createEnhancedRouter,
+  EnhancedClientRouter,
+  type EnhancedNavigationOptions,
+  type EnhancedRouterConfig,
+} from './client-router-with-transitions.js';
 // Manifest generation
 export {
   generateRobotsTxt,

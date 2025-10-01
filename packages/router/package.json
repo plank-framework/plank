@@ -30,6 +30,9 @@
     "test:coverage": "vitest run --coverage",
     "test:coverage:ui": "vitest run --coverage --ui"
   },
+  "dependencies": {
+    "@plank/runtime-dom": "workspace:*"
+  },
   "devDependencies": {
     "@types/jsdom": "^27.0.0",
     "jsdom": "^24.1.0"

@@ -110,16 +110,20 @@ function resolveIslandPath(src: string): string {
     return src;
   }
 
-  // For relative paths, resolve relative to the app directory
-  // The current page is at / (root), so islands should be at /app/islands/
-
-  // Handle relative paths like "./islands/Counter.plk"
+  // For relative paths, resolve to the compiled islands directory
+  let resolvedPath: string;
   if (src.startsWith('./')) {
-    return `/app/${src.substring(2)}`;
+    resolvedPath = src.substring(2); // Remove "./"
+  } else {
+    resolvedPath = src;
   }
 
-  // Handle relative paths like "islands/Counter.plk"
-  return `/app/${src}`;
+  // Convert .plk extension to .js for compiled islands
+  if (resolvedPath.endsWith('.plk')) {
+    resolvedPath = resolvedPath.replace('.plk', '.js');
+  }
+
+  return `/${resolvedPath}`;
 }
 
 /**

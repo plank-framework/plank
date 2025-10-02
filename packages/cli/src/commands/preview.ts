@@ -4,7 +4,7 @@
 
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, resolve } from 'node:path';
 
 export interface PreviewOptions {
@@ -37,62 +37,21 @@ export async function previewCommand(options: PreviewOptions = {}): Promise<void
     // Create a simple static file server
     const server = createServer(async (req, res) => {
       try {
-        let filePath = resolve(distPath, req.url || '/');
+        const filePath = resolveFilePath(req.url || '/', distPath);
 
-        // Handle directory requests
-        if (filePath.endsWith('/')) {
-          filePath = resolve(filePath, 'index.html');
-        }
-
-        // Security check - ensure file is within dist directory
-        if (!filePath.startsWith(distPath)) {
+        if (!isPathSafe(filePath, distPath)) {
           res.writeHead(403, { 'Content-Type': 'text/plain' });
           res.end('Forbidden');
           return;
         }
 
-        // Try to read the file
         const content = await readFile(filePath);
-        const ext = extname(filePath);
-
-        // Set appropriate content type
-        const contentTypes: Record<string, string> = {
-          '.html': 'text/html',
-          '.css': 'text/css',
-          '.js': 'application/javascript',
-          '.json': 'application/json',
-          '.png': 'image/png',
-          '.jpg': 'image/jpeg',
-          '.jpeg': 'image/jpeg',
-          '.gif': 'image/gif',
-          '.svg': 'image/svg+xml',
-          '.ico': 'image/x-icon',
-        };
-
-        const contentType = contentTypes[ext] || 'application/octet-stream';
+        const contentType = getContentType(filePath);
 
         res.writeHead(200, { 'Content-Type': contentType });
         res.end(content);
       } catch (_error) {
-        // File not found or other error
-        res.writeHead(404, { 'Content-Type': 'text/html' });
-        res.end(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>404 - Not Found</title>
-              <style>
-                body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; }
-                h1 { color: #e74c3c; }
-              </style>
-            </head>
-            <body>
-              <h1>404 - Page Not Found</h1>
-              <p>The requested page could not be found.</p>
-              <a href="/">← Back to home</a>
-            </body>
-          </html>
-        `);
+        send404Response(res);
       }
     });
 
@@ -119,4 +78,68 @@ export async function previewCommand(options: PreviewOptions = {}): Promise<void
     console.error(error);
     process.exit(1);
   }
+}
+
+function resolveFilePath(url: string, distPath: string): string {
+  if (url === '/') {
+    return resolve(distPath, 'index.html');
+  }
+
+  const relativePath = url.startsWith('/') ? url.slice(1) : url;
+  let filePath = resolve(distPath, relativePath);
+
+  if (filePath.endsWith('/')) {
+    filePath = resolve(filePath, 'index.html');
+  } else if (!existsSync(filePath)) {
+    const htmlPath = `${filePath}.html`;
+    if (existsSync(htmlPath)) {
+      filePath = htmlPath;
+    }
+  }
+
+  return filePath;
+}
+
+function isPathSafe(filePath: string, distPath: string): boolean {
+  const normalizedFilePath = filePath.replace(/\\/g, '/');
+  const normalizedDistPath = distPath.replace(/\\/g, '/');
+  return normalizedFilePath.startsWith(normalizedDistPath);
+}
+
+function getContentType(filePath: string): string {
+  const ext = extname(filePath);
+  const contentTypes: Record<string, string> = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+  };
+  return contentTypes[ext] || 'application/octet-stream';
+}
+
+function send404Response(res: ServerResponse<IncomingMessage>): void {
+  res.writeHead(404, { 'Content-Type': 'text/html' });
+  res.end(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>404 - Not Found</title>
+        <style>
+          body { font-family: system-ui, sans-serif; text-align: center; padding: 2rem; }
+          h1 { color: #e74c3c; }
+        </style>
+      </head>
+      <body>
+        <h1>404 - Page Not Found</h1>
+        <p>The requested page could not be found.</p>
+        <a href="/">← Back to home</a>
+      </body>
+    </html>
+  `);
 }

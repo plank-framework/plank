@@ -81,14 +81,16 @@ describe('DOM Bindings', () => {
       stop.stop();
     });
 
-    test('should use innerHTML when text is false', () => {
+    test('should use textContent for security when text is false', () => {
       const html = signal('<strong>Hello</strong>');
       const div = document.createElement('div');
       container.appendChild(div);
 
       const stop = bindText(div, html, { text: false });
 
-      expect(div.innerHTML).toBe('<strong>Hello</strong>');
+      // SECURITY FIX: Always use textContent to prevent XSS
+      expect(div.textContent).toBe('<strong>Hello</strong>');
+      expect(div.innerHTML).toBe('&lt;strong&gt;Hello&lt;/strong&gt;');
 
       stop.stop();
     });

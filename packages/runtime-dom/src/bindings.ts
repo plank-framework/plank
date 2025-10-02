@@ -44,7 +44,9 @@ export function bindText<T = unknown>(
     if (text) {
       element.textContent = displayValue;
     } else {
-      element.innerHTML = displayValue;
+      // SECURITY FIX: Use textContent instead of innerHTML to prevent XSS
+      // If HTML content is needed, it should be explicitly sanitized
+      element.textContent = displayValue;
     }
   });
 

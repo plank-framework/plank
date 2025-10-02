@@ -100,13 +100,36 @@ export class CacheManager {
     const totalRequests = this.stats.hits + this.stats.misses;
     const hitRate = totalRequests > 0 ? this.stats.hits / totalRequests : 0;
 
+    // Calculate unique tags and total size
+    const uniqueTags = new Set<string>();
+    let totalSize = 0;
+
+    // Get all entries to calculate tags and size
+    for (const key of keys) {
+      try {
+        const entry = await this.adapter.get(key);
+        if (entry && typeof entry === 'object' && 'tags' in entry) {
+          const cacheEntry = entry as { tags: string[]; value: unknown };
+          // Add tags to unique set
+          for (const tag of cacheEntry.tags) {
+            uniqueTags.add(tag);
+          }
+          // Estimate size (rough calculation)
+          totalSize += JSON.stringify(cacheEntry.value).length;
+        }
+      } catch (error) {
+        // Skip entries that can't be read
+        console.warn(`Failed to read cache entry ${key}:`, error);
+      }
+    }
+
     return {
       totalEntries: keys.length,
-      totalTags: 0, // TODO: Count unique tags
+      totalTags: uniqueTags.size,
       hitRate,
       hits: this.stats.hits,
       misses: this.stats.misses,
-      totalSize: 0, // TODO: Calculate total size
+      totalSize,
     };
   }
 

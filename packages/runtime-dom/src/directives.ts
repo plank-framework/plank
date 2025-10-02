@@ -11,6 +11,7 @@ import {
   bindProperty,
   bindStyle,
   bindText,
+  unbindElement,
 } from './bindings.js';
 
 export interface DirectiveContext<T = unknown> {
@@ -238,6 +239,9 @@ function handleForDirective<T = unknown>(context: DirectiveContext<T>): Effect |
     return;
   }
 
+  // Track created elements for proper cleanup
+  const createdElements: Element[] = [];
+
   // This is a simplified implementation
   // A full implementation would need to parse the expression and handle key tracking
   return effect(() => {
@@ -248,16 +252,22 @@ function handleForDirective<T = unknown>(context: DirectiveContext<T>): Effect |
       return;
     }
 
-    // Clear existing children
-    while (element.firstChild) {
-      element.removeChild(element.firstChild);
+    // MEMORY LEAK FIX: Clean up existing elements and their bindings
+    for (const child of createdElements) {
+      // Remove all bindings from the element before removing it
+      unbindElement(child);
+      if (child.parentNode) {
+        child.parentNode.removeChild(child);
+      }
     }
+    createdElements.length = 0;
 
     // Create new children
     for (const item of items) {
       const child = element.cloneNode(true) as Element;
       child.textContent = String(item);
       element.appendChild(child);
+      createdElements.push(child);
     }
   });
 }

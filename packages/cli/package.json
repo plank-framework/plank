@@ -39,9 +39,6 @@
     "@plank/compiler": "workspace:*",
     "@plank/ssr": "workspace:*"
   },
-  "devDependencies": {
-    "@types/node": "^24.6.1"
-  },
   "publishConfig": {
     "access": "public"
   }

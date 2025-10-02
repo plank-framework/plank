@@ -45,10 +45,5 @@
   "dependencies": {
     "@plank/router": "workspace:*",
     "@plank/ssr": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.3.3",
-    "vitest": "^3.0.0"
   }
 }

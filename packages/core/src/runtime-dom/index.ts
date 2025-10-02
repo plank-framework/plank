@@ -1,0 +1,7 @@
+/**
+ * @fileoverview Runtime DOM module re-exports
+ */
+
+// This will be replaced by the bundling script
+// For now, re-export from the original package
+export * from '@plank/runtime-dom';

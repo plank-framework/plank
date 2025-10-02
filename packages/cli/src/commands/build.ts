@@ -1188,8 +1188,8 @@ function generateDirectiveBinding(directive: Directive, selector: string): strin
       })`;
     }
     case 'x:for': {
-      // x:for is complex and needs special handling - for now, return empty
-      // TODO: Implement proper x:for loop rendering
+      // x:for is handled by the dedicated loop system (extractForLoops + generateForLoopBindings)
+      // Individual x:for directives don't need binding code here
       return '';
     }
   }

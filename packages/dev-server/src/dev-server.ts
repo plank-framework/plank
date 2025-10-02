@@ -10,6 +10,7 @@ import { relative, resolve } from 'node:path';
 import type { FileBasedRouter } from '@plank/router';
 import type { ViteDevServer } from 'vite';
 
+import { createErrorOverlay, generateErrorOverlayScript } from './error-overlay.js';
 import type { DevServer, DevServerConfig, FileChangeEvent, HMRUpdate } from './types.js';
 import { plankPlugin } from './vite-plugin.js';
 
@@ -85,7 +86,33 @@ export class PlankDevServer extends EventEmitter implements DevServer {
                   }
                 } catch (error) {
                   console.error('Route rendering error:', error);
-                  next();
+
+                  // Show error overlay
+                  const errorOptions: Parameters<typeof createErrorOverlay>[1] = {
+                    type: 'error',
+                  };
+                  if (req.url) {
+                    errorOptions.file = req.url;
+                  }
+                  const errorOverlay = createErrorOverlay(error as Error, errorOptions);
+
+                  const errorScript = generateErrorOverlayScript(errorOverlay);
+                  const errorHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Plank Development Error</title>
+</head>
+<body>
+  <div id="app">Loading...</div>
+  <script>${errorScript}</script>
+</body>
+</html>`;
+
+                  res.statusCode = 500;
+                  res.setHeader('Content-Type', 'text/html');
+                  res.end(errorHtml);
+                  return;
                 }
               });
             },
@@ -115,11 +142,10 @@ export class PlankDevServer extends EventEmitter implements DevServer {
 
       this.emit('server:start');
     } catch (error) {
-      this.emit('error', {
-        message: `Failed to start development server: ${(error as Error).message}`,
-        stack: (error as Error).stack,
+      const errorOverlay = createErrorOverlay(error as Error, {
         type: 'error',
       });
+      this.emit('error', errorOverlay);
       throw error;
     }
   }
@@ -151,11 +177,10 @@ export class PlankDevServer extends EventEmitter implements DevServer {
       this.isRunningFlag = false;
       this.emit('server:stop');
     } catch (error) {
-      this.emit('error', {
-        message: `Failed to stop development server: ${(error as Error).message}`,
-        stack: (error as Error).stack,
+      const errorOverlay = createErrorOverlay(error as Error, {
         type: 'error',
       });
+      this.emit('error', errorOverlay);
       throw error;
     }
   }

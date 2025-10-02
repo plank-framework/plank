@@ -70,20 +70,17 @@ async function createProjectStructure(
       preview: 'plank preview',
     },
     dependencies: {
-      '@plank/compiler': '^0.1.0',
-      '@plank/router': '^0.1.0',
-      '@plank/ssr': '^0.1.0',
-      '@plank/dev-server': '^0.1.0',
+      '@plank/core': '^0.1.0',
     },
     devDependencies: {
-      plank: '^0.1.0',
+      '@plank/cli': '^0.1.0',
     },
   };
 
   await writeFile(join(projectPath, 'package.json'), `${JSON.stringify(packageJson, null, 2)}\n`);
 
   // Create plank.config.ts
-  const configContent = `import { defineConfig } from 'plank';
+  const configContent = `import { defineConfig } from '@plank/core';
 
 export default defineConfig({
   // Configuration options

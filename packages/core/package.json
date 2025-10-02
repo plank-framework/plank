@@ -1,0 +1,58 @@
+{
+  "name": "@plank/core",
+  "version": "0.1.0",
+  "description": "Plank framework core - islands architecture with fine-grained reactivity",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && npm run bundle",
+    "bundle": "node scripts/bundle.js",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit",
+    "lint": "biome lint .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format .",
+    "format:fix": "biome check --write .",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "commander": "^14.0.1"
+  },
+  "devDependencies": {
+    "@plank/compiler": "workspace:*",
+    "@plank/router": "workspace:*",
+    "@plank/ssr": "workspace:*",
+    "@plank/dev-server": "workspace:*",
+    "@plank/runtime-core": "workspace:*",
+    "@plank/runtime-dom": "workspace:*",
+    "@types/node": "^24.6.1",
+    "esbuild": "^0.19.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "framework",
+    "islands",
+    "reactivity",
+    "ssr",
+    "typescript",
+    "web"
+  ]
+}

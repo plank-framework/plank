@@ -57,7 +57,8 @@ async function loadTypeScriptConfig(configPath: string, content: string): Promis
     .replace(/export\s+default\s+/g, 'module.exports = ')
     .replace(/import\s+.*?from\s+['"].*?['"];?\s*/g, '')
     .replace(/interface\s+\w+\s*{[^}]*}/g, '')
-    .replace(/type\s+\w+\s*=.*?;/g, '');
+    .replace(/type\s+\w+\s*=.*?;/g, '')
+    .replace(/defineConfig\s*\(/g, '({');
 
   await fs.writeFile(tempPath, jsContent);
 
@@ -74,8 +75,10 @@ async function loadTypeScriptConfig(configPath: string, content: string): Promis
 /**
  * Load configuration from a single config file
  */
-async function loadConfigFromFile(configPath: string): Promise<PlankConfig> {
-  console.log(`📋 Loading config from: ${configPath}`);
+async function loadConfigFromFile(configPath: string, silent = false): Promise<PlankConfig> {
+  if (!silent) {
+    console.log(`📋 Loading config from: ${configPath}`);
+  }
 
   // Read the config file content
   const fs = await import('node:fs/promises');
@@ -96,7 +99,9 @@ async function loadConfigFromFile(configPath: string): Promise<PlankConfig> {
       configModule = await loadTypeScriptConfig(configPath, content);
     } catch (importError) {
       // If dynamic import fails, fall back to default config
-      console.warn(`⚠️  Could not import TypeScript config, using defaults:`, importError);
+      if (!silent) {
+        console.warn(`⚠️  Could not import TypeScript config, using defaults:`, importError);
+      }
       return defaultConfig;
     }
   } else {
@@ -116,7 +121,7 @@ async function loadConfigFromFile(configPath: string): Promise<PlankConfig> {
 /**
  * Load Plank configuration from plank.config.ts or plank.config.js
  */
-export async function loadConfig(projectRoot: string): Promise<PlankConfig> {
+export async function loadConfig(projectRoot: string, silent = false): Promise<PlankConfig> {
   const configPaths = [
     resolve(projectRoot, 'plank.config.ts'),
     resolve(projectRoot, 'plank.config.js'),
@@ -126,9 +131,11 @@ export async function loadConfig(projectRoot: string): Promise<PlankConfig> {
   for (const configPath of configPaths) {
     if (existsSync(configPath)) {
       try {
-        return await loadConfigFromFile(configPath);
+        return await loadConfigFromFile(configPath, silent);
       } catch (error) {
-        console.warn(`⚠️  Failed to load config from ${configPath}:`, error);
+        if (!silent) {
+          console.warn(`⚠️  Failed to load config from ${configPath}:`, error);
+        }
         return defaultConfig;
       }
     }

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "plank dev",
     "build": "plank build",
-    "preview": "plank preview"
+    "preview": "plank preview",
+    "analyze": "plank analyze"
   },
   "dependencies": {
     "@plank/compiler": "workspace:*",

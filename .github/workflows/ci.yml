@@ -36,8 +36,8 @@ jobs:
       - name: Test
         run: pnpm test:run
 
-      - name: Build
-        run: pnpm build
+      - name: Build packages
+        run: pnpm build --filter="./packages/**/*"
 
   # TODO: Add Bun and Deno testing when adapters are implemented
   # test-bun:

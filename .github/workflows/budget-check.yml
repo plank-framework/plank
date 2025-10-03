@@ -27,20 +27,23 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: pnpm build
+        run: pnpm build --filter="./packages/*"
+
+      - name: Setup Plank CLI
+        run: |
+          echo "$(pwd)/packages/cli/dist" >> $GITHUB_PATH
+          chmod +x packages/cli/dist/cli.js
 
       - name: Build examples
-        run: |
-          cd examples/marketing-zero-js && pnpm build
-          cd ../island-counter && pnpm build
+        run: pnpm build --filter="./examples/*"
 
       - name: Analyze bundle sizes
         run: |
           cd examples/marketing-zero-js
-          node ../../packages/cli/dist/cli.js analyze --fail-on-exceed --format=json > budget-report.json
+          plank analyze --fail-on-exceed --format=json > budget-report.json
 
           cd ../island-counter
-          node ../../packages/cli/dist/cli.js analyze --fail-on-exceed --format=json > budget-report.json
+          plank analyze --fail-on-exceed --format=json > budget-report.json
 
       - name: Comment PR with results
         if: github.event_name == 'pull_request'

@@ -31,18 +31,17 @@ jobs:
 
       - name: Build examples
         run: |
-          echo "$(pwd)/packages/cli/dist" >> $GITHUB_PATH
-          chmod +x packages/cli/dist/cli.js
-          pnpm build --filter="./examples/*"
+          cd examples/marketing-zero-js
+          node ../../packages/cli/dist/cli.js build
+          cd ../island-counter
+          node ../../packages/cli/dist/cli.js build
 
       - name: Analyze bundle sizes
         run: |
-          echo "$(pwd)/packages/cli/dist" >> $GITHUB_PATH
-          chmod +x packages/cli/dist/cli.js
           cd examples/marketing-zero-js
-          plank analyze --fail-on-exceed --format=json > budget-report.json
+          node ../../packages/cli/dist/cli.js analyze --fail-on-exceed --format=json > budget-report.json
           cd ../island-counter
-          plank analyze --fail-on-exceed --format=json > budget-report.json
+          node ../../packages/cli/dist/cli.js analyze --fail-on-exceed --format=json > budget-report.json
 
       - name: Comment PR with results
         if: github.event_name == 'pull_request'

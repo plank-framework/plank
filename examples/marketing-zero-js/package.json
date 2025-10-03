@@ -15,6 +15,6 @@
     "@plank/dev-server": "workspace:*"
   },
   "devDependencies": {
-    "plank": "workspace:*"
+    "@plank/cli": "workspace:*"
   }
 }

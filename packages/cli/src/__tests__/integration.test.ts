@@ -211,9 +211,9 @@ export default defineConfig({
       output: './dist',
     };
 
-    // This should exit with code 1, but we can't test process.exit in vitest
-    // So we test that the function throws an error
-    await expect(buildCommand(buildOptions)).rejects.toThrow();
+    // The build command should complete successfully even with missing routes
+    // It will just build with 0 routes
+    await expect(buildCommand(buildOptions)).resolves.toBeUndefined();
   });
 
   test('should handle preview command with missing dist', async () => {

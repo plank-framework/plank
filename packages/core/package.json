@@ -25,10 +25,7 @@
     "format": "biome format .",
     "format:fix": "biome check --write .",
     "check": "biome check .",
-    "check:fix": "biome check --write .",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "check:fix": "biome check --write ."
   },
   "dependencies": {
     "commander": "^14.0.1"

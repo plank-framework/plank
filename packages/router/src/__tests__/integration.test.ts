@@ -560,7 +560,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'contact.plk'), '<h1>Contact</h1>');
 
     // Wait for file system event to be processed
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify new route was discovered
     const routesAfterAdd = router.getRoutes();
@@ -572,7 +572,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'products', 'index.plk'), '<h1>Products</h1>');
 
     // Wait for file system event to be processed
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify new route was discovered
     const routesAfterDir = router.getRoutes();
@@ -584,7 +584,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(routesDir, 'product', '[id].plk'), '<h1>Product {id}</h1>');
 
     // Wait for file system event to be processed
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify dynamic route was discovered
     const routesAfterDynamic = router.getRoutes();
@@ -711,7 +711,7 @@ describe('Router Integration Tests', () => {
     await writeFile(join(layoutsDir, 'admin', 'layout.plk'), '<div class="admin">{children}</div>');
 
     // Wait for file system event to be processed
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify new layout was discovered
     const layoutsAfterAdd = router.getLayouts();

@@ -119,7 +119,8 @@ describe('Error Overlay', () => {
     const html = generateErrorOverlay(error);
 
     expect(html).toContain('&lt;script&gt;');
-    expect(html).toContain('alert("xss")');
+    expect(html).toContain('alert(&quot;xss&quot;)');
     expect(html).not.toContain('<script>');
+    expect(html).not.toContain('alert("xss")');
   });
 });

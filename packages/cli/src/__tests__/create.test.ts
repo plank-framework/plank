@@ -95,11 +95,8 @@ describe('create command', () => {
       build: 'plank build',
       preview: 'plank preview',
     });
-    expect(packageJson.dependencies).toHaveProperty('@plank/compiler');
-    expect(packageJson.dependencies).toHaveProperty('@plank/router');
-    expect(packageJson.dependencies).toHaveProperty('@plank/ssr');
-    expect(packageJson.dependencies).toHaveProperty('@plank/dev-server');
-    expect(packageJson.devDependencies).toHaveProperty('plank');
+    expect(packageJson.dependencies).toHaveProperty('@plank/core');
+    expect(packageJson.devDependencies).toHaveProperty('@plank/cli');
   });
 
   it('should create plank.config.ts with correct content', async () => {

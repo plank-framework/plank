@@ -58,11 +58,15 @@ export class BunAdapter implements BunServer {
     };
 
     // Resolve Bun.serve at runtime without requiring Bun types at build time
-    const maybeServe = (globalThis as unknown as { Bun?: { serve?: unknown } }).Bun?.serve as unknown;
+    const maybeServe = (globalThis as unknown as { Bun?: { serve?: unknown } }).Bun
+      ?.serve as unknown;
     if (typeof maybeServe !== 'function') {
       throw new Error('Bun.serve is not available in this runtime');
     }
-    const serve = maybeServe as (options: Record<string, unknown>) => { stop: () => Promise<void>; port: number };
+    const serve = maybeServe as (options: Record<string, unknown>) => {
+      stop: () => Promise<void>;
+      port: number;
+    };
 
     const server = serve({
       port: this.config.port,
@@ -152,7 +156,9 @@ export class BunAdapter implements BunServer {
     const uint8 = new Uint8Array(body);
 
     // Use Bun's built-in compression
-    const maybeCompress = (globalThis as unknown as { Bun?: { gzipSync?: (data: Uint8Array) => Uint8Array } }).Bun?.gzipSync;
+    const maybeCompress = (
+      globalThis as unknown as { Bun?: { gzipSync?: (data: Uint8Array) => Uint8Array } }
+    ).Bun?.gzipSync;
 
     if (maybeCompress) {
       const compressed = maybeCompress(uint8);
@@ -171,5 +177,3 @@ export class BunAdapter implements BunServer {
     return response;
   }
 }
-
-

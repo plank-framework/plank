@@ -54,7 +54,7 @@ export interface EdgeAdapter {
   /** Handle incoming requests */
   handleRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
   /** Serve static assets */
-  serveStatic(path: string, env: Env): Promise<Response | null>;
+  serveStatic(path: string, env: Env, request: Request): Promise<Response | null>;
   /** Create error response */
   createErrorResponse(error: Error, env: Env): Response;
 }

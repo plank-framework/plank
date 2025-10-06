@@ -42,7 +42,10 @@ export function isSafePath(requestPath: string): boolean {
   return normalized.startsWith('/') && !normalized.includes('..');
 }
 
-export async function resolveStaticFile(staticDir: string, requestPath: string): Promise<string | null> {
+export async function resolveStaticFile(
+  staticDir: string,
+  requestPath: string
+): Promise<string | null> {
   if (!isSafePath(requestPath)) return null;
   const filePath = join(staticDir, requestPath);
   try {
@@ -67,5 +70,3 @@ export function getCacheControl(filePath: string, dev = false): string {
   }
   return 'public, max-age=300';
 }
-
-

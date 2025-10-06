@@ -1,5 +1,5 @@
 /**
- * @fileoverview Streaming SSR utilities for Bun adapter
+ * @fileoverview Streaming SSR utilities for Deno adapter
  */
 
 /**
@@ -135,4 +135,58 @@ export function createAsyncStreamResponse(
   });
 
   return createStreamingResponse(stream, options);
+}
+
+/**
+ * Create a streaming response from Deno file
+ */
+export function createFileStreamResponse(
+  file: Deno.FsFile,
+  options: StreamingOptions = {}
+): Response {
+  const stream = new ReadableStream({
+    start(controller) {
+      const pump = async (): Promise<void> => {
+        try {
+          await processFileStream(file, controller, options);
+        } catch (error) {
+          controller.error(error);
+        }
+      };
+
+      pump();
+    },
+    cancel() {
+      file.close();
+    },
+  });
+
+  return createStreamingResponse(stream, options);
+}
+
+/**
+ * Process file stream with backpressure handling
+ */
+async function processFileStream(
+  file: Deno.FsFile,
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  options: StreamingOptions
+): Promise<void> {
+  const buffer = new Uint8Array(8192);
+
+  while (true) {
+    const bytesRead = await file.read(buffer);
+    if (bytesRead === null || bytesRead === 0) {
+      controller.close();
+      break;
+    }
+
+    // Check backpressure
+    if (options.backpressure && controller.desiredSize && controller.desiredSize <= 0) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      continue;
+    }
+
+    controller.enqueue(buffer.slice(0, bytesRead));
+  }
 }

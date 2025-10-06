@@ -104,7 +104,9 @@ export class DenoAdapter implements DenoServer {
       await Deno.readDir(this.config.staticDir);
     } catch (error) {
       if (error instanceof Deno.errors.PermissionDenied) {
-        throw new Error(`Permission denied: Cannot read static directory '${this.config.staticDir}'. Run with --allow-read flag.`);
+        throw new Error(
+          `Permission denied: Cannot read static directory '${this.config.staticDir}'. Run with --allow-read flag.`
+        );
       }
       // Directory might not exist, that's okay
     }
@@ -115,7 +117,9 @@ export class DenoAdapter implements DenoServer {
       listener.close();
     } catch (error) {
       if (error instanceof Deno.errors.PermissionDenied) {
-        throw new Error(`Permission denied: Cannot bind to ${this.config.hostname}:${this.config.port}. Run with --allow-net flag.`);
+        throw new Error(
+          `Permission denied: Cannot bind to ${this.config.hostname}:${this.config.port}. Run with --allow-net flag.`
+        );
       }
       throw error;
     }
@@ -127,9 +131,16 @@ export class DenoAdapter implements DenoServer {
       const filePath = await this.resolveStaticFile(path);
       if (!filePath) return null;
 
-      // Read file
-      const content = await Deno.readFile(filePath);
       const stat = await Deno.stat(filePath);
+
+      // For large files, use streaming
+      if (stat.size > 1024 * 1024) {
+        // 1MB threshold
+        return this.serveStaticFileStream(filePath, stat);
+      }
+
+      // For smaller files, read into memory
+      const content = await Deno.readFile(filePath);
 
       // Create response
       const response = new Response(content, {
@@ -142,7 +153,10 @@ export class DenoAdapter implements DenoServer {
       });
 
       // Apply compression if enabled
-      if (this.config.compression && this.shouldCompress(new Request('http://localhost'), content.length)) {
+      if (
+        this.config.compression &&
+        this.shouldCompress(new Request('http://localhost'), content.length)
+      ) {
         return this.compressResponse(response);
       }
 
@@ -153,6 +167,29 @@ export class DenoAdapter implements DenoServer {
       }
       throw error;
     }
+  }
+
+  private async serveStaticFileStream(filePath: string, stat: Deno.FileInfo): Promise<Response> {
+    const file = await Deno.open(filePath, { read: true });
+
+    const { createFileStreamResponse } = await import('./streaming.js');
+    const response = createFileStreamResponse(file, {
+      backpressure: true,
+      chunkSize: 8192,
+    });
+
+    // Add headers
+    const headers = new Headers(response.headers);
+    headers.set('Content-Type', this.getMimeType(filePath));
+    headers.set('Cache-Control', this.getCacheControl(filePath));
+    headers.set('Last-Modified', stat.mtime?.toUTCString() || new Date().toUTCString());
+    headers.set('Content-Length', stat.size.toString());
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   }
 
   private async resolveStaticFile(path: string): Promise<string | null> {
@@ -260,7 +297,20 @@ export class DenoAdapter implements DenoServer {
 
   private getCacheControl(filePath: string): string {
     const ext = filePath.split('.').pop()?.toLowerCase();
-    const cacheableExts = ['css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'eot'];
+    const cacheableExts = [
+      'css',
+      'js',
+      'png',
+      'jpg',
+      'jpeg',
+      'gif',
+      'svg',
+      'ico',
+      'woff',
+      'woff2',
+      'ttf',
+      'eot',
+    ];
 
     if (cacheableExts.includes(ext || '')) {
       return this.config.dev ? 'no-cache' : 'public, max-age=31536000'; // 1 year

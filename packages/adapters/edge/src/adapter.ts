@@ -2,7 +2,8 @@
  * @fileoverview Edge adapter for Plank framework (Cloudflare Workers)
  */
 
-import type { EdgeAdapterConfig, Env, EdgeAdapter, StaticAsset } from './types.js';
+import { StaticAssetsManager } from './static-assets.js';
+import type { EdgeAdapter, EdgeAdapterConfig, Env, StaticAsset } from './types.js';
 
 export function createEdgeAdapter(config: EdgeAdapterConfig = {}): EdgeAdapter {
   return new EdgeAdapterImpl(config);
@@ -10,6 +11,7 @@ export function createEdgeAdapter(config: EdgeAdapterConfig = {}): EdgeAdapter {
 
 class EdgeAdapterImpl implements EdgeAdapter {
   private config: Required<EdgeAdapterConfig>;
+  private staticAssetsManager?: StaticAssetsManager;
 
   constructor(config: EdgeAdapterConfig = {}) {
     this.config = {
@@ -32,10 +34,15 @@ class EdgeAdapterImpl implements EdgeAdapter {
 
   async handleRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
+      // Initialize static assets manager if not already done
+      if (!this.staticAssetsManager) {
+        this.staticAssetsManager = new StaticAssetsManager(env);
+      }
+
       // Try to serve static assets first
       if (request.method === 'GET') {
         const url = new URL(request.url);
-        const staticResponse = await this.serveStatic(url.pathname, env);
+        const staticResponse = await this.serveStatic(url.pathname, env, request);
         if (staticResponse) {
           return staticResponse;
         }
@@ -54,12 +61,16 @@ class EdgeAdapterImpl implements EdgeAdapter {
     }
   }
 
-  async serveStatic(path: string, env: Env): Promise<Response | null> {
-    // Try KV first
+  async serveStatic(path: string, env: Env, request: Request): Promise<Response | null> {
+    // Use enhanced static assets manager
+    if (this.staticAssetsManager) {
+      return this.staticAssetsManager.getOptimizedAsset(path, request);
+    }
+
+    // Fallback to basic static serving
     const kvAsset = await this.tryKVAsset(path, env);
     if (kvAsset) return kvAsset;
 
-    // Try R2
     const r2Asset = await this.tryR2Asset(path, env);
     if (r2Asset) return r2Asset;
 
@@ -87,7 +98,8 @@ class EdgeAdapterImpl implements EdgeAdapter {
   }
 
   createErrorResponse(error: Error, _env: Env): Response {
-    const errorHtml = this.config.errorHandling.errorTemplate?.(error) ?? this.defaultErrorTemplate(error);
+    const errorHtml =
+      this.config.errorHandling.errorTemplate?.(error) ?? this.defaultErrorTemplate(error);
 
     return new Response(errorHtml, {
       status: 500,
@@ -205,7 +217,20 @@ class EdgeAdapterImpl implements EdgeAdapter {
 
   private getCacheControl(path: string): string {
     const ext = path.split('.').pop()?.toLowerCase();
-    const cacheableExts = ['css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'eot'];
+    const cacheableExts = [
+      'css',
+      'js',
+      'png',
+      'jpg',
+      'jpeg',
+      'gif',
+      'svg',
+      'ico',
+      'woff',
+      'woff2',
+      'ttf',
+      'eot',
+    ];
 
     if (cacheableExts.includes(ext || '')) {
       return `public, max-age=${this.config.staticAssets.cacheTtl}`;
@@ -217,7 +242,7 @@ class EdgeAdapterImpl implements EdgeAdapter {
   private async generateETag(content: ArrayBuffer): Promise<string> {
     const hash = await crypto.subtle.digest('SHA-1', content);
     const hashArray = Array.from(new Uint8Array(hash));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
     return `"${hashHex}"`;
   }
 

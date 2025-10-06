@@ -3,9 +3,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { generateCode } from '../codegen.js';
 import { compile, generateDOMIR } from '../index.js';
 import { parse } from '../parser.js';
-import { generateCode } from '../codegen.js';
 
 describe('Code Generation', () => {
   it('should generate client code for simple template', () => {

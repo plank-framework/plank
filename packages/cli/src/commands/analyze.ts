@@ -328,28 +328,26 @@ async function getRouteSpecificFiles(
       const htmlContent = await readFile(htmlPath, 'utf-8');
       const islands = extractIslandsFromHtml(htmlContent);
 
-
       // Only include runtime if there are islands
       if (islands.length > 0) {
-        routeFiles.push(...allJsFiles.filter(file => file.includes('runtime')));
+        routeFiles.push(...allJsFiles.filter((file) => file.includes('runtime')));
       }
 
       // Add island files based on what's actually used in the HTML
       for (const island of islands) {
         // Convert Counter.plk -> Counter.js
         const islandName = island.replace('.plk', '');
-        const islandFile = allJsFiles.find(file => file.includes(`islands/${islandName}.js`));
+        const islandFile = allJsFiles.find((file) => file.includes(`islands/${islandName}.js`));
         if (islandFile) {
           routeFiles.push(islandFile);
         }
       }
-
     }
   } catch {
     // If we can't read the HTML file, fall back to including all islands
     console.warn(`⚠️  Could not analyze HTML for ${routePath}, including all islands`);
-    routeFiles.push(...allJsFiles.filter(file => file.includes('runtime')));
-    routeFiles.push(...allJsFiles.filter(file => file.includes('island')));
+    routeFiles.push(...allJsFiles.filter((file) => file.includes('runtime')));
+    routeFiles.push(...allJsFiles.filter((file) => file.includes('island')));
   }
 
   return routeFiles;
@@ -594,7 +592,9 @@ function displayRouteDetails(route: RouteAnalysis): void {
   const statusColor = route.status === 'pass' ? '🟢' : '🔴';
 
   console.log(`${statusIcon} ${route.path}`);
-  console.log(`   ${statusColor} ${route.budgetType.toUpperCase()} • ${formatBytes(route.jsBytes)} / ${formatBytes(route.budget)} (${budgetPercent}%)`);
+  console.log(
+    `   ${statusColor} ${route.budgetType.toUpperCase()} • ${formatBytes(route.jsBytes)} / ${formatBytes(route.budget)} (${budgetPercent}%)`
+  );
 
   if (route.jsBytes > 0) {
     displayRouteBreakdown(route.breakdown);

@@ -176,4 +176,57 @@ describe('ClientCacheAdapter', () => {
     // Should not throw
     await expect(adapter.invalidateTag('nonexistent')).resolves.toBeUndefined();
   });
+
+  it('should handle delete with IndexedDB fallback to localStorage', async () => {
+    // Mock IndexedDB to be unavailable
+    const originalIndexedDB = global.indexedDB;
+    global.indexedDB = undefined as unknown as IDBFactory;
+
+    // Set a value first
+    await adapter.set('test-key', 'test-value');
+    expect(await adapter.get('test-key')).toBe('test-value');
+
+    // Delete should fallback to localStorage
+    await adapter.delete('test-key');
+    expect(await adapter.get('test-key')).toBeNull();
+
+    // Restore IndexedDB
+    global.indexedDB = originalIndexedDB;
+  });
+
+  it('should handle delete with IndexedDB fallback to localStorage', async () => {
+    // Mock IndexedDB to be unavailable to force localStorage fallback
+    const originalIndexedDB = global.indexedDB;
+    global.indexedDB = undefined as unknown as IDBFactory;
+
+    // Set a value first
+    await adapter.set('test-key', 'test-value');
+    expect(await adapter.get('test-key')).toBe('test-value');
+
+    // Delete should fallback to localStorage
+    await adapter.delete('test-key');
+    expect(await adapter.get('test-key')).toBeNull();
+
+    // Restore IndexedDB
+    global.indexedDB = originalIndexedDB;
+  });
+
+  it('should handle localStorage errors gracefully in fallback mode', async () => {
+    // Mock localStorage.setItem to throw an error
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = vi.fn(() => {
+      throw new Error('localStorage error');
+    });
+
+    // Mock IndexedDB to be unavailable to force localStorage fallback
+    const originalIndexedDB = global.indexedDB;
+    global.indexedDB = undefined as unknown as IDBFactory;
+
+    // Should not throw even when localStorage fails
+    await expect(adapter.set('test-key', 'test-value')).resolves.toBeUndefined();
+
+    // Restore
+    Storage.prototype.setItem = originalSetItem;
+    global.indexedDB = originalIndexedDB;
+  });
 });

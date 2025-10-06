@@ -3,8 +3,8 @@
  * Parses .plk templates and generates optimized JavaScript
  */
 
-import { parse } from './parser.js';
 import { generateCode } from './codegen.js';
+import { parse } from './parser.js';
 
 export interface CompilerOptions {
   /** Enable development mode with additional debugging info */
@@ -73,6 +73,8 @@ export function compile(source: string, options: CompilerOptions = {}): CompileR
   };
 }
 
+// Re-export code generation functionality
+export { generateCode, generateDOMIR } from './codegen.js';
 // Re-export grammar definitions
 export {
   DIRECTIVE_PATTERNS,
@@ -96,5 +98,3 @@ export type {
 } from './parser.js';
 // Re-export parser functionality
 export { parse, validate } from './parser.js';
-// Re-export code generation functionality
-export { generateCode, generateDOMIR } from './codegen.js';

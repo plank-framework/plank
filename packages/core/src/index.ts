@@ -11,15 +11,15 @@
 export { defineConfig, type PlankConfig } from './config.js';
 
 // Reactive primitives - essential for app development
-export { signal, computed, effect, type Signal, type Computed } from './runtime-core/index.js';
+export { type Computed, computed, effect, type Signal, signal } from './runtime-core/index.js';
 
 // DOM bindings - essential for template directives
 export {
-  bindText,
-  bindEvent,
-  bindInputValue,
+  type BindingOptions,
   bindCheckbox,
   bindClass,
+  bindEvent,
+  bindInputValue,
+  bindText,
   hydrateIslands,
-  type BindingOptions,
 } from './runtime-dom/index.js';

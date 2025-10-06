@@ -2,6 +2,7 @@
  * @fileoverview Edge adapter for Plank framework (Cloudflare Workers)
  */
 
+import { SecurityManager } from './security.js';
 import { StaticAssetsManager } from './static-assets.js';
 import type { EdgeAdapter, EdgeAdapterConfig, Env, StaticAsset } from './types.js';
 
@@ -12,6 +13,7 @@ export function createEdgeAdapter(config: EdgeAdapterConfig = {}): EdgeAdapter {
 class EdgeAdapterImpl implements EdgeAdapter {
   private config: Required<EdgeAdapterConfig>;
   private staticAssetsManager?: StaticAssetsManager;
+  private securityManager?: SecurityManager;
 
   constructor(config: EdgeAdapterConfig = {}) {
     this.config = {
@@ -34,9 +36,23 @@ class EdgeAdapterImpl implements EdgeAdapter {
 
   async handleRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
-      // Initialize static assets manager if not already done
+      // Initialize managers if not already done
       if (!this.staticAssetsManager) {
         this.staticAssetsManager = new StaticAssetsManager(env);
+      }
+      if (!this.securityManager) {
+        this.securityManager = new SecurityManager();
+      }
+
+      // Check rate limiting
+      const rateLimit = await this.securityManager.checkRateLimit(request, env);
+      if (!rateLimit.allowed) {
+        const error = new Error('Rate limit exceeded');
+        return this.securityManager.createErrorResponse(
+          429,
+          error,
+          env.ENVIRONMENT === 'development'
+        );
       }
 
       // Try to serve static assets first
@@ -44,18 +60,50 @@ class EdgeAdapterImpl implements EdgeAdapter {
         const url = new URL(request.url);
         const staticResponse = await this.serveStatic(url.pathname, env, request);
         if (staticResponse) {
-          return staticResponse;
+          // Add rate limit headers to static responses
+          const headers = new Headers(staticResponse.headers);
+          for (const [key, value] of Object.entries(rateLimit.headers)) {
+            headers.set(key, value);
+          }
+
+          const response = new Response(staticResponse.body, {
+            status: staticResponse.status,
+            statusText: staticResponse.statusText,
+            headers,
+          });
+
+          return this.securityManager.addSecurityHeaders(
+            response,
+            env.ENVIRONMENT === 'development'
+          );
         }
       }
 
       // Try custom request handler
       const customResponse = await this.config.onRequest(request, env, ctx);
       if (customResponse) {
-        return this.addSecurityHeaders(customResponse);
+        // Add rate limit headers
+        const headers = new Headers(customResponse.headers);
+        for (const [key, value] of Object.entries(rateLimit.headers)) {
+          headers.set(key, value);
+        }
+
+        const response = new Response(customResponse.body, {
+          status: customResponse.status,
+          statusText: customResponse.statusText,
+          headers,
+        });
+
+        return this.securityManager.addSecurityHeaders(response, env.ENVIRONMENT === 'development');
       }
 
       // Return 404
-      return new Response('Not Found', { status: 404 });
+      const error = new Error('Not Found');
+      return this.securityManager.createErrorResponse(
+        404,
+        error,
+        env.ENVIRONMENT === 'development'
+      );
     } catch (error) {
       return this.createErrorResponse(error as Error, env);
     }
@@ -97,7 +145,17 @@ class EdgeAdapterImpl implements EdgeAdapter {
     return this.createStaticResponse(asset, path);
   }
 
-  createErrorResponse(error: Error, _env: Env): Response {
+  createErrorResponse(error: Error, env: Env): Response {
+    // Use security manager for error responses
+    if (this.securityManager) {
+      return this.securityManager.createErrorResponse(
+        500,
+        error,
+        env.ENVIRONMENT === 'development'
+      );
+    }
+
+    // Fallback to basic error response
     const errorHtml =
       this.config.errorHandling.errorTemplate?.(error) ?? this.defaultErrorTemplate(error);
 

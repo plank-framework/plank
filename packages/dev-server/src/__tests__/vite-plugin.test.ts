@@ -757,4 +757,62 @@ export function toggle() { active(!active()); }
       expect(result.code).not.toContain('export function mount');
     }
   });
+
+  test('should handle parseElementDirectives with closing tags', async () => {
+    const { __testing__ } = await import('../vite-plugin.js');
+
+    const html = '</div>';
+    const directives = [];
+    const tagIndexMap = new Map();
+
+    // Test with closing tag (should return early)
+    const result = __testing__.parseElementDirectives(html, 0, directives, tagIndexMap);
+
+    expect(result).toBe(1); // Should return tagStart + 1
+    expect(directives).toHaveLength(0);
+  });
+
+  test('should handle parseElementDirectives with comments', async () => {
+    const { __testing__ } = await import('../vite-plugin.js');
+
+    const html = '<!-- comment -->';
+    const directives = [];
+    const tagIndexMap = new Map();
+
+    // Test with comment (should return early)
+    const result = __testing__.parseElementDirectives(html, 0, directives, tagIndexMap);
+
+    expect(result).toBe(1); // Should return tagStart + 1
+    expect(directives).toHaveLength(0);
+  });
+
+  test('should handle parseElementDirectives with invalid tag', async () => {
+    const { __testing__ } = await import('../vite-plugin.js');
+
+    const html = '<';
+    const directives = [];
+    const tagIndexMap = new Map();
+
+    // Test with invalid tag (no tag name match)
+    const result = __testing__.parseElementDirectives(html, 0, directives, tagIndexMap);
+
+    expect(result).toBe(1); // Should return tagStart + 1
+    expect(directives).toHaveLength(0);
+  });
+
+  test('should handle generateErrorCode function', async () => {
+    const { __testing__ } = await import('../vite-plugin.js');
+
+    const error = new Error('Test compilation error');
+    error.stack = 'Error: Test compilation error\n    at test.js:1:1';
+    const filePath = '/app/routes/test.plk';
+
+    const errorCode = __testing__.generateErrorCode(error, filePath);
+
+    expect(errorCode).toContain('Error in /app/routes/test.plk');
+    expect(errorCode).toContain('Test compilation error');
+    expect(errorCode).toContain('export const error');
+    expect(errorCode).toContain('export default');
+    expect(errorCode).toContain('Compilation Error: Test compilation error');
+  });
 });

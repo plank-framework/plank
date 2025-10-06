@@ -1295,4 +1295,6 @@ export const __testing__ = {
   extractTextInterpolations,
   stripDirectives,
   extractHTMLFromPlk,
+  parseElementDirectives,
+  generateErrorCode,
 };

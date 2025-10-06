@@ -275,4 +275,12 @@ describe('DOM IR Execution', () => {
     // Should not throw, but log error
     expect(() => executeDOMIR(operations, context)).not.toThrow();
   });
+
+  test('should handle removeElement cleanup', () => {
+    const mockElement = document.createElement('div');
+    createDOMExecutionContext(container);
+
+    // Test removeElement (this will hit the cleanup code)
+    expect(() => removeElement(mockElement)).not.toThrow();
+  });
 });

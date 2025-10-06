@@ -160,7 +160,11 @@ export class PlankParser {
       if (!isValidExpression(value)) {
         this.addError(`Invalid expression: ${value}`);
       } else {
-        directive.expression = this.parseExpression(value);
+        // Extract content from curly braces for expression parsing
+        const expressionContent = value.startsWith('{') && value.endsWith('}')
+          ? value.slice(1, -1)
+          : value;
+        directive.expression = this.parseExpression(expressionContent);
       }
     }
 

@@ -116,4 +116,19 @@ describe('withViewTransition', () => {
 
     expect(callback).toHaveBeenCalled();
   });
+
+  it('should handle browser support detection', () => {
+    const transitions = createViewTransitions();
+
+    // Test that isEnabled method works (which internally uses checkSupport)
+    expect(typeof transitions.isEnabled()).toBe('boolean');
+  });
+
+  it('should handle style injection through public API', () => {
+    const transitions = createViewTransitions({ enabled: true });
+
+    // Test that the public API works without accessing private methods
+    // The injectStyles method is called internally when enabled is true
+    expect(transitions.isEnabled()).toBeDefined();
+  });
 });

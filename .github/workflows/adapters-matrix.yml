@@ -1,0 +1,133 @@
+name: Adapters Test Matrix
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'packages/adapters/**'
+      - '.github/workflows/adapters-*.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'packages/adapters/**'
+      - '.github/workflows/adapters-*.yml'
+
+jobs:
+  test-matrix:
+    name: Test ${{ matrix.adapter }} on ${{ matrix.runtime }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Node.js Adapter
+          - adapter: "node"
+            runtime: "node-20"
+            node-version: "20"
+            test-command: "pnpm test --filter=@plank/adapter-node"
+            build-command: "pnpm build --filter=@plank/adapter-node"
+
+          - adapter: "node"
+            runtime: "node-22"
+            node-version: "22"
+            test-command: "pnpm test --filter=@plank/adapter-node"
+            build-command: "pnpm build --filter=@plank/adapter-node"
+
+          # Bun Adapter
+          - adapter: "bun"
+            runtime: "bun-latest"
+            node-version: "20"
+            test-command: "pnpm test --filter=@plank/adapter-bun"
+            build-command: "pnpm build --filter=@plank/adapter-bun"
+            integration-test: "cd packages/adapters/bun && bun test test-bun.test.js"
+
+          # Edge Adapter (Cloudflare Workers)
+          - adapter: "edge"
+            runtime: "edge-workers"
+            node-version: "20"
+            test-command: "pnpm test --filter=@plank/adapter-edge"
+            build-command: "pnpm build --filter=@plank/adapter-edge"
+
+          # Deno Adapter
+          - adapter: "deno"
+            runtime: "deno-latest"
+            node-version: "20"
+            test-command: "pnpm test --filter=@plank/adapter-deno"
+            build-command: "pnpm build --filter=@plank/adapter-deno"
+            integration-test: "cd packages/adapters/deno && deno test --allow-net --allow-read test-deno.test.js"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Bun (if needed)
+        if: matrix.runtime == 'bun-latest'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Deno (if needed)
+        if: matrix.runtime == 'deno-latest'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build adapter
+        run: ${{ matrix.build-command }}
+
+      - name: Type check
+        run: pnpm type-check --filter=@plank/adapter-${{ matrix.adapter }}
+
+      - name: Lint
+        run: pnpm lint --filter=@plank/adapter-${{ matrix.adapter }}
+
+      - name: Run unit tests
+        run: ${{ matrix.test-command }}
+
+      - name: Run integration tests (Bun)
+        if: matrix.runtime == 'bun-latest' && matrix.integration-test
+        run: ${{ matrix.integration-test }}
+
+      - name: Run integration tests (Deno)
+        if: matrix.runtime == 'deno-latest' && matrix.integration-test
+        run: ${{ matrix.integration-test }}
+
+      - name: Test adapter exports
+        run: |
+          echo "Testing ${{ matrix.adapter }} adapter exports..."
+          node -e "
+            try {
+              const adapter = require('./packages/adapters/${{ matrix.adapter }}/dist/index.js');
+              console.log('✅ ${{ matrix.adapter }} adapter built successfully');
+              console.log('Available exports:', Object.keys(adapter));
+            } catch (error) {
+              console.error('❌ Failed to load ${{ matrix.adapter }} adapter:', error.message);
+              process.exit(1);
+            }
+          "
+
+  # Summary job
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: test-matrix
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          echo "All adapter tests completed!"
+          echo "Check individual job results above for details."

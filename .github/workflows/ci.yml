@@ -1,14 +1,20 @@
-name: CI
+name: Core Framework CI
 
 on:
   push:
     branches: [main, develop]
+    paths-ignore:
+      - 'packages/adapters/**'
+      - '.github/workflows/adapters-*.yml'
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - 'packages/adapters/**'
+      - '.github/workflows/adapters-*.yml'
 
 jobs:
-  test:
-    name: Test on Node.js
+  core-framework:
+    name: Core Framework Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -33,42 +39,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test
-        run: pnpm test:run
+      - name: Test core packages
+        run: pnpm test:run --filter='./packages/**/*' --filter='!@plank/adapter-*'
 
-      - name: Build packages
-        run: pnpm build --filter="./packages/**/*"
-
-  # TODO: Add Bun and Deno testing when adapters are implemented
-  # test-bun:
-  #   name: Test on Bun
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #     - name: Setup Bun
-  #       uses: oven-sh/setup-bun@v1
-  #       with:
-  #         bun-version: latest
-  #     - name: Install dependencies
-  #       run: pnpm install --frozen-lockfile
-  #     - name: Test with Bun
-  #       run: bun test
-
-  # test-deno:
-  #   name: Test on Deno
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #     - name: Setup Deno
-  #       uses: denoland/setup-deno@v1
-  #       with:
-  #         deno-version: latest
-  #     - name: Install dependencies
-  #       run: pnpm install --frozen-lockfile
-  #     - name: Test with Deno
-  #       run: deno test --allow-all
+      - name: Build core packages
+        run: pnpm build --filter='./packages/**/*' --filter='!@plank/adapter-*'
 
   changeset:
     name: Changeset Check

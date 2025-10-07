@@ -43,6 +43,11 @@
   "workspaces": [
     "packages/*"
   ],
+  "pnpm": {
+    "overrides": {
+      "esbuild": ">=0.25.0"
+    }
+  },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "biome check --write"

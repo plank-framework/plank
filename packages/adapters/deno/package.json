@@ -28,7 +28,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:coverage:ui": "vitest run --coverage --ui"
+    "test:coverage:ui": "vitest run --coverage --ui",
+    "test:integration": "deno test test-deno.test.ts"
   },
   "publishConfig": {
     "access": "public"

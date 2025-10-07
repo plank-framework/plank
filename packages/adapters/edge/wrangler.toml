@@ -1,0 +1,35 @@
+name = "plank-edge-adapter-example"
+main = "example-worker.js"
+compatibility_date = "2023-10-30"
+
+# Environment variables
+[env.production.vars]
+NODE_ENV = "production"
+
+[env.staging.vars]
+NODE_ENV = "staging"
+
+# KV namespaces for static assets
+[[kv_namespaces]]
+binding = "STATIC_ASSETS_KV"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+# R2 buckets for larger static assets
+[[r2_buckets]]
+binding = "STATIC_ASSETS_R2"
+bucket_name = "your-r2-bucket-name"
+preview_bucket_name = "your-preview-r2-bucket-name"
+
+# Routes (optional - for custom domains)
+# routes = [
+#   { pattern = "example.com/*", zone_name = "example.com" }
+# ]
+
+# Build configuration
+[build]
+command = "npm run build"
+
+# Limits
+[limits]
+cpu_ms = 50

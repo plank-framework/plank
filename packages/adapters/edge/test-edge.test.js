@@ -15,8 +15,15 @@ global.KVNamespace = class MockKV {
     this.data = new Map();
   }
 
-  async get(key) {
-    return this.data.get(key) || null;
+  async get(key, type = 'text') {
+    const value = this.data.get(key);
+    if (!value) return null;
+
+    if (type === 'arrayBuffer') {
+      return new TextEncoder().encode(value).buffer;
+    }
+
+    return value;
   }
 
   async put(key, value) {
@@ -39,7 +46,12 @@ global.R2Bucket = class MockR2 {
           controller.close();
         }
       }),
-      headers: new Headers({ 'content-type': 'text/plain' })
+      headers: new Headers({ 'content-type': 'text/plain' }),
+      uploaded: new Date().toISOString(),
+      httpEtag: `"${Date.now()}"`,
+      async arrayBuffer() {
+        return new TextEncoder().encode(value).buffer;
+      }
     };
   }
 
@@ -95,7 +107,7 @@ async function runTests() {
   // Test 2: Request handling
   await test('should handle basic requests', async () => {
     const adapter = createEdgeAdapter({
-      handler: async (request) => {
+      onRequest: async (request) => {
         if (request.url.includes('/test')) {
           return new Response('Test Response', { status: 200 });
         }
@@ -103,8 +115,9 @@ async function runTests() {
       }
     });
 
+    const mockEnv = { ENVIRONMENT: 'test' };
     const request = new Request('http://localhost:3000/test');
-    const response = await adapter.handleRequest(request, {}, new global.ExecutionContext());
+    const response = await adapter.handleRequest(request, mockEnv, new global.ExecutionContext());
 
     if (!response) throw new Error('No response returned');
     if (response.status !== 200) throw new Error(`Expected status 200, got ${response.status}`);
@@ -126,7 +139,8 @@ async function runTests() {
     });
 
     const request = new Request('http://localhost:3000/styles.css');
-    const response = await adapter.handleRequest(request, {}, new global.ExecutionContext());
+    const mockEnv = { ENVIRONMENT: 'test' };
+    const response = await adapter.handleRequest(request, mockEnv, new global.ExecutionContext());
 
     if (!response) throw new Error('No response returned');
     if (response.status !== 200) throw new Error(`Expected status 200, got ${response.status}`);
@@ -148,7 +162,8 @@ async function runTests() {
     });
 
     const request = new Request('http://localhost:3000/script.js');
-    const response = await adapter.handleRequest(request, {}, new global.ExecutionContext());
+    const mockEnv = { ENVIRONMENT: 'test' };
+    const response = await adapter.handleRequest(request, mockEnv, new global.ExecutionContext());
 
     if (!response) throw new Error('No response returned');
     if (response.status !== 200) throw new Error(`Expected status 200, got ${response.status}`);
@@ -167,7 +182,8 @@ async function runTests() {
     });
 
     const request = new Request('http://localhost:3000/nonexistent.css');
-    const response = await adapter.handleRequest(request, {}, new global.ExecutionContext());
+    const mockEnv = { ENVIRONMENT: 'test' };
+    const response = await adapter.handleRequest(request, mockEnv, new global.ExecutionContext());
 
     if (!response) throw new Error('No response returned');
     if (response.status !== 404) throw new Error(`Expected status 404, got ${response.status}`);
@@ -185,7 +201,8 @@ async function runTests() {
     });
 
     const request = new Request('http://localhost:3000/');
-    const response = await adapter.handleRequest(request, {}, new global.ExecutionContext());
+    const mockEnv = { ENVIRONMENT: 'test' };
+    const response = await adapter.handleRequest(request, mockEnv, new global.ExecutionContext());
 
     if (!response) throw new Error('No response returned');
 
@@ -208,7 +225,8 @@ async function runTests() {
     });
 
     const request = new Request('http://localhost:3000/');
-    const response = await adapter.handleRequest(request, {}, new global.ExecutionContext());
+    const mockEnv = { ENVIRONMENT: 'test' };
+    const response = await adapter.handleRequest(request, mockEnv, new global.ExecutionContext());
 
     if (!response) throw new Error('No response returned');
 
@@ -220,13 +238,14 @@ async function runTests() {
   // Test 8: Error handling
   await test('should handle errors gracefully', async () => {
     const adapter = createEdgeAdapter({
-      handler: async () => {
+      onRequest: async () => {
         throw new Error('Test error');
       }
     });
 
     const request = new Request('http://localhost:3000/');
-    const response = await adapter.handleRequest(request, {}, new global.ExecutionContext());
+    const mockEnv = { ENVIRONMENT: 'test' };
+    const response = await adapter.handleRequest(request, mockEnv, new global.ExecutionContext());
 
     if (!response) throw new Error('No response returned');
     if (response.status !== 500) throw new Error(`Expected status 500, got ${response.status}`);
@@ -235,16 +254,17 @@ async function runTests() {
   // Test 9: Performance test
   await test('should handle concurrent requests efficiently', async () => {
     const adapter = createEdgeAdapter({
-      handler: async (_request) => {
+      onRequest: async (_request) => {
         return new Response('OK', { status: 200 });
       }
     });
 
     const concurrentRequests = 50;
-    const requests = Array.from({ length: concurrentRequests }, (_, i) => {
-      const request = new Request(`http://localhost:3000/test-${i}`);
-      return adapter.handleRequest(request, {}, new global.ExecutionContext());
-    });
+      const mockEnv = { ENVIRONMENT: 'test' };
+      const requests = Array.from({ length: concurrentRequests }, (_, i) => {
+        const request = new Request(`http://localhost:3000/test-${i}`);
+        return adapter.handleRequest(request, mockEnv, new global.ExecutionContext());
+      });
 
     const startTime = performance.now();
     const responses = await Promise.all(requests);

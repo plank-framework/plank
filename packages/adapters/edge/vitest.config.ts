@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
+    exclude: ['**/test-edge.test.js'], // Exclude integration test from Vitest
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

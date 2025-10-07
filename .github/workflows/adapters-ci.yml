@@ -133,6 +133,12 @@ jobs:
       - name: Run unit tests (Node.js environment)
         run: pnpm test --filter="@plank/adapter-edge"
 
+      - name: Run Edge integration tests
+        run: |
+          echo "Running Edge adapter integration tests..."
+          cd packages/adapters/edge
+          node test-edge.test.js
+
       - name: Type check
         run: pnpm type-check --filter="@plank/adapter-edge"
 

@@ -43,6 +43,7 @@ export class StaticAssetsManager {
 
   constructor(
     private env: Env,
+    private config?: { kvNamespace?: KVNamespace; r2Bucket?: R2Bucket },
     optimization: AssetOptimization = {},
     cacheStrategy: CacheStrategy = {}
   ) {
@@ -78,7 +79,13 @@ export class StaticAssetsManager {
     if (!asset) return null;
 
     // Optimize asset
-    const optimizedAsset = await this.optimizeAsset(asset, path, request);
+    let optimizedAsset: StaticAsset;
+    try {
+      optimizedAsset = await this.optimizeAsset(asset, path, request);
+    } catch {
+      // Use original asset if optimization fails
+      optimizedAsset = asset;
+    }
 
     // Cache optimized asset
     await this.setCache(cacheKey, optimizedAsset);
@@ -90,7 +97,7 @@ export class StaticAssetsManager {
    * Get asset from KV storage
    */
   private async getAssetFromKV(path: string): Promise<StaticAsset | null> {
-    const kv = this.env.STATIC_KV;
+    const kv = this.config?.kvNamespace || this.env.STATIC_KV;
     if (!kv) return null;
 
     try {
@@ -99,11 +106,18 @@ export class StaticAssetsManager {
 
       if (!value) return null;
 
+      let etag: string;
+      try {
+        etag = await this.generateETag(value);
+      } catch {
+        etag = `"${Date.now()}"`;
+      }
+
       return {
         content: value,
         mimeType: this.getMimeType(path),
         cacheControl: this.getCacheControl(path),
-        etag: await this.generateETag(value),
+        etag,
       };
     } catch {
       return null;
@@ -114,7 +128,7 @@ export class StaticAssetsManager {
    * Get asset from R2 storage
    */
   private async getAssetFromR2(path: string): Promise<StaticAsset | null> {
-    const r2 = this.env.STATIC_R2;
+    const r2 = this.config?.r2Bucket || this.env.STATIC_R2;
     if (!r2) return null;
 
     try {
@@ -123,8 +137,10 @@ export class StaticAssetsManager {
 
       if (!object) return null;
 
+    const content = await object.arrayBuffer();
+
       return {
-        content: await object.arrayBuffer(),
+        content,
         mimeType: this.getMimeType(path),
         cacheControl: this.getCacheControl(path),
         lastModified: object.uploaded,
@@ -310,7 +326,10 @@ export class StaticAssetsManager {
     }
 
     if (asset.lastModified) {
-      headers.set('Last-Modified', asset.lastModified.toUTCString());
+      const lastModified = typeof asset.lastModified === 'string'
+        ? new Date(asset.lastModified)
+        : asset.lastModified;
+      headers.set('Last-Modified', lastModified.toUTCString());
     }
 
     return new Response(asset.content, { headers });

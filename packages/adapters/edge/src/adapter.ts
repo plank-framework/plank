@@ -38,7 +38,14 @@ class EdgeAdapterImpl implements EdgeAdapter {
     try {
       // Initialize managers if not already done
       if (!this.staticAssetsManager) {
-        this.staticAssetsManager = new StaticAssetsManager(env);
+        const staticConfig: { kvNamespace?: KVNamespace; r2Bucket?: R2Bucket } = {};
+        if (this.config.staticAssets?.kvNamespace) {
+          staticConfig.kvNamespace = this.config.staticAssets.kvNamespace;
+        }
+        if (this.config.staticAssets?.r2Bucket) {
+          staticConfig.r2Bucket = this.config.staticAssets.r2Bucket;
+        }
+        this.staticAssetsManager = new StaticAssetsManager(env, staticConfig);
       }
       if (!this.securityManager) {
         this.securityManager = new SecurityManager();
@@ -57,25 +64,9 @@ class EdgeAdapterImpl implements EdgeAdapter {
 
       // Try to serve static assets first
       if (request.method === 'GET') {
-        const url = new URL(request.url);
-        const staticResponse = await this.serveStatic(url.pathname, env, request);
+        const staticResponse = await this.tryServeStatic(request, env, rateLimit);
         if (staticResponse) {
-          // Add rate limit headers to static responses
-          const headers = new Headers(staticResponse.headers);
-          for (const [key, value] of Object.entries(rateLimit.headers)) {
-            headers.set(key, value);
-          }
-
-          const response = new Response(staticResponse.body, {
-            status: staticResponse.status,
-            statusText: staticResponse.statusText,
-            headers,
-          });
-
-          return this.securityManager.addSecurityHeaders(
-            response,
-            env.ENVIRONMENT === 'development'
-          );
+          return staticResponse;
         }
       }
 
@@ -107,6 +98,32 @@ class EdgeAdapterImpl implements EdgeAdapter {
     } catch (error) {
       return this.createErrorResponse(error as Error, env);
     }
+  }
+
+  private async tryServeStatic(request: Request, env: Env, rateLimit: { headers: Record<string, string> }): Promise<Response | null> {
+    const url = new URL(request.url);
+    const staticResponse = await this.serveStatic(url.pathname, env, request);
+    if (!staticResponse) return null;
+
+    // Add rate limit headers to static responses
+    const headers = new Headers(staticResponse.headers);
+    for (const [key, value] of Object.entries(rateLimit.headers)) {
+      headers.set(key, value);
+    }
+
+    const response = new Response(staticResponse.body, {
+      status: staticResponse.status,
+      statusText: staticResponse.statusText,
+      headers,
+    });
+
+    if (this.securityManager) {
+      return this.securityManager.addSecurityHeaders(
+        response,
+        env.ENVIRONMENT === 'development'
+      );
+    }
+    return this.addSecurityHeaders(response);
   }
 
   async serveStatic(path: string, env: Env, request: Request): Promise<Response | null> {

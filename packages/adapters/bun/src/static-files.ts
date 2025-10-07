@@ -21,7 +21,7 @@ const MIME_TYPES: Record<string, string> = {
   '.ttf': 'font/ttf',
   '.eot': 'application/vnd.ms-fontobject',
   '.txt': 'text/plain; charset=utf-8',
-  '.xml': 'application/xml',
+  '.xml': 'text/xml; charset=utf-8',
   '.pdf': 'application/pdf',
   '.zip': 'application/zip',
   '.webp': 'image/webp',

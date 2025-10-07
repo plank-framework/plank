@@ -12,12 +12,16 @@ export interface StreamingOptions {
   chunkSize?: number;
   /** Timeout for stream operations */
   timeout?: number;
+  /** Content type for the response */
+  contentType?: string;
 }
 
 /**
  * Create a stream with backpressure handling
  */
-function createBackpressureStream(stream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+export function createBackpressureStream(
+  stream: ReadableStream<Uint8Array>
+): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
       const reader = stream.getReader();
@@ -62,7 +66,11 @@ function createBackpressureStream(stream: ReadableStream<Uint8Array>): ReadableS
       pump();
     },
     cancel() {
-      stream.cancel();
+      try {
+        stream.cancel();
+      } catch {
+        // Stream might already be locked, ignore
+      }
     },
   });
 }
@@ -74,14 +82,14 @@ export function createStreamingResponse(
   stream: ReadableStream<Uint8Array>,
   options: StreamingOptions = {}
 ): Response {
-  const { backpressure = true } = options;
+  const { backpressure = true, contentType = 'text/html; charset=utf-8' } = options;
 
   // Wrap the stream with backpressure handling if enabled
   const wrappedStream = backpressure ? createBackpressureStream(stream) : stream;
 
   return new Response(wrappedStream, {
     headers: {
-      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Type': contentType,
       'Transfer-Encoding': 'chunked',
     },
   });

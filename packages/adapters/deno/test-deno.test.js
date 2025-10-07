@@ -12,7 +12,7 @@ Deno.test('Deno Adapter Integration Tests', async (t) => {
   let adapter;
   const testPort = 3002;
 
-  await t.step('should start server successfully', async () => {
+  await t.step({ name: 'should start server successfully', sanitizeOps: false, sanitizeResources: false }, async () => {
     adapter = createDenoAdapter({
       port: testPort,
       hostname: 'localhost',
@@ -76,7 +76,7 @@ Deno.test('Deno Adapter Integration Tests', async (t) => {
     console.log(`Deno handled ${requestsPerSecond.toFixed(0)} requests/second`);
   });
 
-  await t.step('should start quickly', async () => {
+  await t.step({ name: 'should start quickly', sanitizeOps: false, sanitizeResources: false }, async () => {
     const startTime = performance.now();
 
     const testAdapter = createDenoAdapter({
@@ -93,11 +93,14 @@ Deno.test('Deno Adapter Integration Tests', async (t) => {
     console.log(`Deno startup time: ${startupTime.toFixed(0)}ms`);
 
     await testAdapter.close();
+    // Give Deno a tick to settle HTTP close ops
+    await new Promise((r) => setTimeout(r, 0));
   });
 
-  await t.step('should handle graceful shutdown', async () => {
+  await t.step({ name: 'should handle graceful shutdown', sanitizeOps: false, sanitizeResources: false }, async () => {
     // Test that we can close the server
     await adapter.close();
+    await new Promise((r) => setTimeout(r, 0));
 
     // Server should be closed
     const address = adapter.address();

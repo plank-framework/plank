@@ -8,11 +8,11 @@
 import { assertEquals, assertExists } from 'https://deno.land/std@0.208.0/assert/mod.ts';
 import { createDenoAdapter } from './dist/index.js';
 
-Deno.test('Deno Adapter Integration Tests', async (t) => {
+Deno.test({ name: 'Deno Adapter Integration Tests', sanitizeOps: false, sanitizeResources: false }, async (t) => {
   let adapter;
   const testPort = 3002;
 
-  await t.step({ name: 'should start server successfully', sanitizeOps: false, sanitizeResources: false }, async () => {
+  await t.step('should start server successfully', async () => {
     adapter = createDenoAdapter({
       port: testPort,
       hostname: 'localhost',
@@ -76,7 +76,7 @@ Deno.test('Deno Adapter Integration Tests', async (t) => {
     console.log(`Deno handled ${requestsPerSecond.toFixed(0)} requests/second`);
   });
 
-  await t.step({ name: 'should start quickly', sanitizeOps: false, sanitizeResources: false }, async () => {
+  await t.step('should start quickly', async () => {
     const startTime = performance.now();
 
     const testAdapter = createDenoAdapter({
@@ -97,7 +97,7 @@ Deno.test('Deno Adapter Integration Tests', async (t) => {
     await new Promise((r) => setTimeout(r, 0));
   });
 
-  await t.step({ name: 'should handle graceful shutdown', sanitizeOps: false, sanitizeResources: false }, async () => {
+  await t.step('should handle graceful shutdown', async () => {
     // Test that we can close the server
     await adapter.close();
     await new Promise((r) => setTimeout(r, 0));

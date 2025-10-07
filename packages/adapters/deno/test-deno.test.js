@@ -39,6 +39,12 @@ Deno.test('Deno Adapter Integration Tests', async (t) => {
     const response = await fetch(`http://localhost:${testPort}/api/test`);
     // Should get some response (either from custom handler or default 404)
     assertExists(response);
+    // Consume body to avoid resource leak warnings
+    try {
+      await response.text();
+    } catch {
+      await response.body?.cancel();
+    }
   });
 
   await t.step('should handle concurrent requests efficiently', async () => {
@@ -56,6 +62,17 @@ Deno.test('Deno Adapter Integration Tests', async (t) => {
 
     // Should handle at least 100 requests per second (Deno is slower than Bun)
     assertEquals(responses.length, concurrentRequests);
+    // Consume/cancel all bodies to prevent leaks
+    await Promise.all(
+      responses.map(async (r) => {
+        try {
+          // Prefer cheap drain
+          await r.text();
+        } catch {
+          await r.body?.cancel();
+        }
+      }),
+    );
     console.log(`Deno handled ${requestsPerSecond.toFixed(0)} requests/second`);
   });
 
